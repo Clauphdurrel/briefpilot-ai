@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProjectType {
+  WEBSITE
+  ECOMMERCE
+  SAAS
+  MOBILE_APP
+  INTERNAL_TOOL
+  AUTOMATION
+  OTHER
+}
+
+enum ProjectStatus {
+  DRAFT
+  INTERVIEW
+  BRIEF_GENERATED
+  VALIDATED
+  ARCHIVED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  type        ProjectType
+  description String?
+  status      ProjectStatus @default(DRAFT)
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  interviews InterviewMessage[]
+  briefs     Brief[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([type])
+  @@index([status])
+}
+
+model InterviewMessage {
+  id        String   @id @default(cuid())
+  role      String
+  content   String
+  metadata  Json?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model Brief {
+  id      String @id @default(cuid())
+  title   String
+  content String
+  json    Json?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
