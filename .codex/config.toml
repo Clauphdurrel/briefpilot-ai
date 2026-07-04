@@ -1,0 +1,6 @@
+model = "gpt-5.5"
+approval_policy = "on-request"
+
+[project]
+name = "briefpilot-ai"
+description = "SaaS de génération de cahiers des charges, briefs projet, backlog et tâches Codex."

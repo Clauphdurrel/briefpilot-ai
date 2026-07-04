@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: briefpilot_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: briefpilot
+      POSTGRES_PASSWORD: briefpilot
+      POSTGRES_DB: briefpilot_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - briefpilot_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  briefpilot_postgres_data:
