@@ -21,7 +21,7 @@ export async function getOwnedProject(ownerId: string, projectId: string) {
     where: { id: projectId, ownerId },
     select: {
       id: true, name: true, type: true, status: true, description: true,
-      _count: { select: { interviews: true, briefs: true } },
+      _count: { select: { interviews: { where: { role: { in: ["user", "assistant"] } } }, briefs: true } },
     },
   });
 }

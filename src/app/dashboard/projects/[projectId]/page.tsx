@@ -32,8 +32,7 @@ export default async function ProjectDetailPage({
           </div>
         </div>
         <div className="w-full space-y-2 sm:w-auto sm:shrink-0">
-          <Button disabled aria-describedby="interview-unavailable">Lancer l’interview IA</Button>
-          <p id="interview-unavailable" className="text-xs text-muted-foreground">Disponible dans une prochaine étape.</p>
+          <Button asChild><Link href={`/dashboard/projects/${project.id}/interview`}>Lancer l’interview IA</Link></Button>
         </div>
       </div>
       <Card>

@@ -1,0 +1,110 @@
+{
+  "summary": "Gestion immobilière pour les agences au Sénégal.",
+  "message": "Quels profils utiliseront principalement ImmoConnect au sein des agences ?",
+  "knownInformation": [
+    "Le produit vise les agences immobilières au Sénégal."
+  ],
+  "missingInformation": [
+    "Profils utilisateurs détaillés",
+    "Fonctionnalités prioritaires",
+    "Budget",
+    "Délais"
+  ],
+  "assumptions": [],
+  "completionScore": 9,
+  "nextQuestion": {
+    "id": "agency_user_roles",
+    "question": "Quels profils utiliseront principalement ImmoConnect au sein des agences ?",
+    "category": "users",
+    "priority": "high",
+    "required": true,
+    "helpText": null
+  },
+  "coverage": [
+    {
+      "category": "context",
+      "status": "confirmed",
+      "evidence": "Le projet vise les agences immobilières au Sénégal."
+    },
+    {
+      "category": "problem",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "objectives",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "users",
+      "status": "partial",
+      "evidence": "Le projet vise les agences immobilières au Sénégal."
+    },
+    {
+      "category": "features",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "pages",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "journeys",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "roles",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "content",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "branding",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "integrations",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "data",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "technical",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "regulatory",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "budget",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "timeline",
+      "status": "missing",
+      "evidence": null
+    },
+    {
+      "category": "success",
+      "status": "missing",
+      "evidence": null
+    }
+  ]
+}

@@ -7,6 +7,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/server/validators/__tests__/**/*.test.ts"],
+    include: ["src/server/**/__tests__/**/*.test.ts"],
+    setupFiles: ["./tests/unit.setup.ts"],
   },
 });
