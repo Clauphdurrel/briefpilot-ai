@@ -5,7 +5,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div>
         <p className="text-sm text-muted-foreground">Vue d’ensemble</p>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
