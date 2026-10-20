@@ -71,3 +71,17 @@ Chaque agent doit avoir :
   "assumptions": [],
   "confidence_score": 0
 }
+```
+
+## Processus obligatoire
+
+1. Lire le besoin.
+2. Définir le rôle exact de l’agent.
+3. Définir l’input.
+4. Définir l’output.
+5. Créer ou modifier les schemas Zod.
+6. Créer le prompt système.
+7. Créer le service serveur.
+8. Ajouter un exemple.
+9. Ajouter les tests.
+10. Résumer les fichiers créés/modifiés.
