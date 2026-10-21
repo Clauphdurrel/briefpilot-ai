@@ -15,8 +15,8 @@ const readinessResponseSchema = z.object({ data: z.object({ readiness: z.object(
   hasInterview: z.boolean(), requiresDraft: z.boolean(), missingInformation: z.array(z.string()), sourceRevision: z.string(),
 }) }) });
 
-export function GenerateBriefButton({ projectId, readiness: initialReadiness, regenerate = false, label, disabled = false, onPendingChange, showContinueLink = true }: {
-  projectId: string; readiness: BriefReadiness; regenerate?: boolean; label?: string; disabled?: boolean; onPendingChange?: (pending: boolean) => void; showContinueLink?: boolean;
+export function GenerateBriefButton({ projectId, readiness: initialReadiness, regenerate = false, label, disabled = false, onPendingChange, onStart, showContinueLink = true }: {
+  projectId: string; readiness: BriefReadiness; regenerate?: boolean; label?: string; disabled?: boolean; onPendingChange?: (pending: boolean) => void; onStart?: () => boolean; showContinueLink?: boolean;
 }) {
   const router = useRouter();
   const [updatedReadiness, setUpdatedReadiness] = useState<BriefReadiness | null>(null);
@@ -41,7 +41,7 @@ export function GenerateBriefButton({ projectId, readiness: initialReadiness, re
   }, [projectId]);
 
   async function generate() {
-    if (running.current || disabled) return;
+    if (running.current || disabled || (onStart && !onStart())) return;
     running.current = true; setPending(true); onPendingChange?.(true); setError("");
     try {
       const signature = JSON.stringify({ allowDraft, sourceRevision: readiness.sourceRevision });

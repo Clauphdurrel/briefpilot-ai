@@ -31,6 +31,8 @@ before(async () => {
     await pool.query('INSERT INTO "Brief" (id,title,content,json,"projectId","updatedAt") VALUES ($1,\'Cahier des charges\',\'fixture\',$2,$3,NOW())', [briefs[i], sourceJson(), projects[i]]);
   }
   await pool.query('INSERT INTO "Brief" (id,title,content,json,"projectId","updatedAt") VALUES ($1,\'Cahier des charges complet\',\'fixture\',$2,$3,NOW())', [completeBrief, sourceJson(false), projects[0]]);
+  const newerThird = sourceJson(); newerThird.generation.version = 2;
+  await pool.query('INSERT INTO "Brief" (id,title,content,json,"projectId","createdAt","updatedAt") VALUES ($1,\'Version récente\',\'fixture\',$2,$3,NOW()+INTERVAL \'1 second\',NOW())', [randomUUID(), newerThird, projects[2]]);
   mock = createServer(async (request, response) => {
     try {
       const chunks = []; for await (const chunk of request) chunks.push(chunk);
@@ -136,4 +138,7 @@ test("authenticated readers show source/version and anonymous readers are redire
 test("Chrome supports generation, task filters, copy and retained version navigation", { skip: process.env.BACKLOG_VISUAL_TEST !== "1" }, async () => {
   const { checkBacklogBrowser } = await import("./helpers/backlog-browser.mjs");
   await checkBacklogBrowser({ base, token: tokens[2], projectId: projects[2], briefId: briefs[2], beforeRegenerate: () => ageRequests(projects[2]) });
+  const saved = await pool.query('SELECT "sourceBriefId",data FROM "Backlog" WHERE "projectId"=$1 ORDER BY version', [projects[2]]);
+  assert.equal(saved.rows.length, 2);
+  for (const row of saved.rows) { assert.equal(row.sourceBriefId, briefs[2]); assert.equal(row.data.generation.sourceBriefVersion, 1); }
 });

@@ -5,7 +5,7 @@ import { runBriefGeneratorAgent } from "@/server/agents/brief-generator.agent";
 import { documentFixture } from "@/server/agents/__tests__/brief-fixtures";
 import { turn } from "@/server/agents/__tests__/fixtures";
 import { InterviewError } from "@/server/ai/errors";
-import { generateBrief, getBrief, getLatestBrief, listBriefs } from "../brief.service";
+import { generateBrief, getBrief, getBriefReaderContext, getLatestBrief, listBriefs } from "../brief.service";
 
 const mocks = vi.hoisted(() => ({ client: {} as Record<string, unknown> }));
 vi.mock("@/lib/prisma", () => ({ prisma: mocks.client }));
@@ -159,4 +159,14 @@ it("revalidates output before persistence even if a provider adapter returns mal
 
 it("returns not-found for a brief id outside the selected project", async () => {
   await expect(getBrief("owner", project.id, "missing")).rejects.toMatchObject({ code: "BRIEF_NOT_FOUND" });
+});
+
+it("loads reader version headers without loading other documents", async () => {
+  vi.mocked(mocks.client.$queryRaw as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ id: "brief-1", title: "Version enregistrée", createdAt: new Date(), generation: { version: 3, draft: true, sourceRevision: "a".repeat(64) } }]);
+  const reader = await getBriefReaderContext("owner", project.id);
+  expect(reader.briefs[0]).toMatchObject({ id: "brief-1", version: 3, draft: true });
+  const sql = vi.mocked(mocks.client.$queryRaw as ReturnType<typeof vi.fn>).mock.calls[0][0].join("?");
+  expect(sql).toContain(`"json"->'generation'`);
+  expect(sql).toContain('p."ownerId"');
+  expect((mocks.client.brief as { findMany: ReturnType<typeof vi.fn> }).findMany).not.toHaveBeenCalled();
 });

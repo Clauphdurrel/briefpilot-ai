@@ -31,12 +31,17 @@ export async function checkBriefBrowser({ base, token, projectId, onNewAnswers }
       pending.set(id, { resolve, reject, timer });
       socket.send(JSON.stringify({ id, method, params }));
     });
-    const evaluate = async (expression) => (await cdp("Runtime.evaluate", { expression, returnByValue: true })).result.value;
+    const evaluate = async (expression) => {
+      const result = await cdp("Runtime.evaluate", { expression, returnByValue: true, userGesture: true });
+      if (result.exceptionDetails) throw new Error(`Browser evaluation failed: ${result.exceptionDetails.exception?.description ?? result.exceptionDetails.text}`);
+      return result.result.value;
+    };
     const waitFor = async (expression) => {
       for (let i = 0; i < 100; i++) { if (await evaluate(expression)) return; await delay(100); }
       throw new Error(`Browser condition timed out: ${expression}`);
     };
     await cdp("Network.enable");
+    await cdp("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
     await cdp("Network.setCookie", { name: "authjs.session-token", value: token, url: base, httpOnly: true, sameSite: "Lax" });
     await cdp("Emulation.setDeviceMetricsOverride", { width: 375, height: 1100, deviceScaleFactor: 1, mobile: false });
     await cdp("Page.navigate", { url: `${base}/dashboard/projects/${projectId}/interview` });
@@ -50,7 +55,39 @@ export async function checkBriefBrowser({ base, token, projectId, onNewAnswers }
     const firstPath = await evaluate('location.pathname');
     assert.equal(await evaluate("document.querySelectorAll('main [id^=brief-]').length"),17);
     assert.ok(!(await evaluate('document.body.innerText')).includes('message:'));
-    for (const width of [375,1440]) {
+    await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Sommaire')).click(); true");
+    await waitFor("getComputedStyle(document.querySelector('#document-toc')).display!=='none'");
+    await evaluate("document.querySelector('nav[aria-label=\"Sommaire du cahier des charges\"] a[href=\"#brief-features\"]').click(); true");
+    await waitFor("location.hash==='#brief-features' && document.activeElement.id==='brief-features' && !!document.querySelector('nav[aria-label=\"Sommaire du cahier des charges\"] a[href=\"#brief-features\"][aria-current=location]')");
+    await evaluate("Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(document.querySelector('#feature-search'),'introuvable'); document.querySelector('#feature-search').dispatchEvent(new Event('input',{bubbles:true})); true");
+    await waitFor("document.querySelector('#brief-features').textContent.includes('Aucune fonctionnalité ne correspond')");
+    await evaluate("Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(document.querySelector('#feature-search'),'gestion'); document.querySelector('#feature-search').dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('#feature-priority').value='SHOULD'; document.querySelector('#feature-priority').dispatchEvent(new Event('change',{bubbles:true})); true");
+    await waitFor("document.querySelector('#brief-features').textContent.includes('Aucune fonctionnalité ne correspond')");
+    await evaluate("document.querySelector('#feature-priority').value='MUST'; document.querySelector('#feature-priority').dispatchEvent(new Event('change',{bubbles:true})); true");
+    await waitFor("document.querySelectorAll('[data-feature-id]').length===1");
+    await evaluate("document.querySelector('[data-feature-id] details').open=true; true");
+    assert.ok((await evaluate("document.querySelector('[data-feature-id] details').textContent")).includes('Un client ne peut choisir'));
+    await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Analyse et actions').click(); true");
+    await waitFor("getComputedStyle(document.querySelector('#document-insights')).display!=='none'");
+    assert.equal(await evaluate("document.querySelector('[data-stat=features]').textContent"),'1');
+    assert.ok((await evaluate("document.querySelector('#document-insights').textContent")).includes('Hypothèse (1)'));
+    assert.ok((await evaluate("document.querySelector('#document-insights').textContent")).includes('Budget non communiqué'));
+    await evaluate("[...document.querySelectorAll('#document-insights input[type=checkbox]')].forEach(input=>{if(!input.checked)input.click()}); true");
+    await waitFor("!![...document.querySelectorAll('button')].find(b=>b.textContent==='Générer le backlog'&&!b.disabled) && !![...document.querySelectorAll('button')].find(b=>b.textContent==='Régénérer'&&!b.disabled)");
+    await evaluate(`window.__generationCalls=[]; window.__savedFetch=window.fetch.bind(window); window.fetch=async(url,init)=>{
+      if(init?.method==='POST' && (String(url).endsWith('/briefs') || String(url).endsWith('/backlogs'))) { window.__generationCalls.push(String(url)); await new Promise(resolve=>setTimeout(resolve,300)); return new Response(JSON.stringify({error:{code:'BACKLOG_QUOTA',message:'Service local en pause.'}}),{status:503,headers:{'Content-Type':'application/json'}}); }
+      return window.__savedFetch(url,init);
+    }; [...document.querySelectorAll('button')].find(b=>b.textContent==='Générer le backlog').click(); [...document.querySelectorAll('button')].find(b=>b.textContent==='Régénérer').click(); true`);
+    await waitFor("!!document.querySelector('#document-insights [role=alert]') && !![...document.querySelectorAll('button')].find(b=>b.textContent==='Régénérer'&&!b.disabled)");
+    assert.equal(await evaluate('window.__generationCalls.length'),1);
+    await evaluate('window.fetch=window.__savedFetch; true');
+    await evaluate("document.querySelector('#brief-budget').scrollIntoView(); true");
+    await waitFor("!!document.querySelector('nav[aria-label=\"Sommaire du cahier des charges\"] a[href=\"#brief-budget\"][aria-current=location]')");
+    const links = await evaluate("[...document.querySelectorAll('nav[aria-label=\"Navigation depuis le brief\"] a')].map(a=>a.getAttribute('href'))");
+    assert.ok(links.includes(`/dashboard/projects/${projectId}/interview`)); assert.ok(links.includes(`/dashboard/projects/${projectId}/backlogs`));
+    await evaluate("window.scrollTo(0,0); true");
+
+    for (const width of [375,768,1440]) {
       await cdp('Emulation.setDeviceMetricsOverride',{width,height:1100,deviceScaleFactor:1,mobile:false});
       await delay(200);
       assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'),`No overflow at ${width}px`);

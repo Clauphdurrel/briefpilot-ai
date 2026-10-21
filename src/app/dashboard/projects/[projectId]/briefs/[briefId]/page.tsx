@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { GenerateBacklogButton } from "@/components/brief/generate-backlog-button";
+import { BriefActions } from "@/components/brief/brief-actions";
+import { BriefInsights } from "@/components/brief/brief-insights";
+import { BriefToc } from "@/components/brief/brief-toc";
+import { BriefVersions } from "@/components/brief/brief-versions";
+import { BriefWorkspace } from "@/components/brief/brief-workspace";
 import { BriefViewer } from "@/components/brief/brief-viewer";
-import { GenerateBriefButton } from "@/components/brief/generate-brief-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { projectStatusLabels, projectTypeLabels } from "@/config/projects";
 import { InterviewError } from "@/server/ai/errors";
 import { requireUser } from "@/server/services/auth.service";
-import { getBrief, listBriefs } from "@/server/services/brief.service";
+import { getBrief, getBriefReaderContext } from "@/server/services/brief.service";
 import { getOwnedProject } from "@/server/services/project.service";
 import { projectIdSchema } from "@/server/validators/project.schema";
 
@@ -29,7 +32,7 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ pr
     );
     throw error;
   }
-  const { readiness, briefs } = await listBriefs(user.id, project.id);
+  const { readiness, briefs } = await getBriefReaderContext(user.id, project.id);
   return (
     <div className="space-y-6">
       <div className="space-y-3">
@@ -45,15 +48,14 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ pr
         {brief.generation.draft && <p className="text-sm text-muted-foreground">Ce brouillon contient des informations manquantes. Il doit être complété et validé avec le client.</p>}
         {brief.generation.sourceRevision !== readiness.sourceRevision && <p className="text-sm text-muted-foreground">Le projet ou l’interview a évolué depuis cette version. Tu peux régénérer le document.</p>}
       </div>
-      <Card><CardHeader><CardTitle><h2>Préparer le développement</h2></CardTitle></CardHeader><CardContent className="space-y-4">
-        <GenerateBacklogButton projectId={project.id} sourceBriefId={brief.id} requiresDraft={brief.generation.draft || brief.document.missingInformation.length > 0 || brief.document.features.some((feature) => ["assumed", "missing"].includes(feature.status))} />
-        <Link className="inline-block text-sm underline" href={`/dashboard/projects/${project.id}/backlogs`}>Consulter les backlogs du projet</Link>
-      </CardContent></Card>
-      <BriefViewer document={brief.document} />
-      <Card><CardHeader><CardTitle><h2>Actualiser le cahier des charges</h2></CardTitle></CardHeader><CardContent className="space-y-4">
-        <GenerateBriefButton projectId={project.id} readiness={readiness} regenerate />
-        <nav aria-label="Versions du cahier des charges" className="flex flex-wrap gap-3 text-sm">{briefs.map((item) => <Link key={item.id} href={`/dashboard/projects/${project.id}/briefs/${item.id}`} aria-current={item.id === brief.id ? "page" : undefined} className="underline underline-offset-4">{item.version ? `Version ${item.version}` : "Ancienne version"}</Link>)}</nav>
-      </CardContent></Card>
+      {briefs[0] && briefs[0].id !== brief.id && <p className="rounded-lg border bg-background p-3 text-sm text-muted-foreground">Tu consultes une ancienne version. <Link className="font-medium underline" href={`/dashboard/projects/${project.id}/briefs/${briefs[0].id}`}>Revenir à la dernière version</Link></p>}
+      <BriefWorkspace key={brief.id} toc={<BriefToc />} insights={<>
+        <BriefInsights document={brief.document} />
+        <BriefActions projectId={project.id} briefId={brief.id} readiness={readiness} requiresDraft={brief.generation.draft || brief.document.missingInformation.length > 0 || brief.document.features.some((feature) => ["assumed", "missing"].includes(feature.status))} />
+        <BriefVersions versions={briefs} currentId={brief.id} projectId={project.id} />
+      </>}>
+        <BriefViewer document={brief.document} />
+      </BriefWorkspace>
     </div>
   );
 }

@@ -1,17 +1,9 @@
 import type { ReactNode } from "react";
+import { BriefFeatures } from "@/components/brief/brief-features";
+import { BriefStatements as Statements, RequirementBadge as Status } from "@/components/brief/brief-requirements-status";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { briefSections, requirementStatusLabels } from "@/config/brief-sections";
-import type { GeneratedBrief, RequirementStatus, Statement } from "@/server/validators/brief.schema";
-
-function Status({ value }: { value: RequirementStatus }) {
-  return <Badge variant={value === "confirmed" ? "secondary" : "outline"}>{requirementStatusLabels[value]}</Badge>;
-}
-function Statements({ items }: { items: Statement[] }) {
-  return items.length ? <ul className="space-y-3">{items.map((item, index) => <li key={index} className="space-y-1"><Status value={item.status} /><p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">{item.text}</p></li>)}</ul>
-    : <p className="text-muted-foreground">À définir.</p>;
-}
+import { briefSections } from "@/config/brief-sections";
+import type { GeneratedBrief } from "@/server/validators/brief.schema";
 
 export function BriefViewer({ document: doc }: { document: GeneratedBrief }) {
   const sections: Record<(typeof briefSections)[number][0], ReactNode> = {
@@ -21,14 +13,7 @@ export function BriefViewer({ document: doc }: { document: GeneratedBrief }) {
       ["Inclus", doc.projectScope.included], ["Exclus", doc.projectScope.excluded],
       ["Hypothèses", [...doc.projectScope.assumptions, ...doc.assumptions]], ["Limites", doc.projectScope.limits],
     ] as const).map(([label, items]) => <div key={label} className="space-y-2"><h3 className="font-medium">{label}</h3><Statements items={[...items]} /></div>)}</div>,
-    features: doc.features.length ? <div className="space-y-6">{doc.features.map((item) => <article key={item.id} className="space-y-3 rounded-lg border p-4">
-      <div className="flex flex-wrap gap-2"><Status value={item.status} /><Badge variant="outline">{item.priority}</Badge><Badge variant="outline">{item.complexity === "unknown" ? "Complexité à définir" : `Complexité : ${item.complexity}`}</Badge></div>
-      <h3 className="break-words font-semibold [overflow-wrap:anywhere]">{item.id} · {item.name}</h3><p>{item.description}</p>
-      <p className="text-muted-foreground">Acteur : {item.actor}</p>
-      <h4 className="font-medium">Règles métier</h4><Statements items={item.businessRules} />
-      <h4 className="font-medium">Critères d’acceptation</h4><Statements items={item.acceptanceCriteria} />
-      <p className="text-muted-foreground">Dépendances : {item.dependencies.join(", ") || "Aucune déclarée"}</p>
-    </article>)}</div> : <p className="text-muted-foreground">Fonctionnalités à préciser avec le client.</p>,
+    features: <BriefFeatures features={doc.features} />,
     pages: doc.pages.length ? <div className="space-y-6">{doc.pages.map((item) => <article key={item.id} className="space-y-3 rounded-lg border p-4">
       <Status value={item.status} /><h3 className="font-semibold">{item.name}</h3><p>{item.description}</p><Statements items={[item.objective]} />
       <p className="text-muted-foreground">Utilisateurs : {item.users.join(", ") || "À définir"}</p>
@@ -47,11 +32,11 @@ export function BriefViewer({ document: doc }: { document: GeneratedBrief }) {
     acceptance: <Statements items={doc.acceptanceCriteria} />,
   };
   return (
-    <div className="space-y-6">
-      <Card><CardHeader><CardTitle><h2>Sommaire</h2></CardTitle></CardHeader><CardContent>
-        <nav aria-label="Sommaire du cahier des charges"><ol className="grid gap-2 text-sm sm:grid-cols-2">{briefSections.map(([id, title], index) => <li key={id}><a href={`#brief-${id}`} className="underline-offset-4 hover:underline">{String(index + 1).padStart(2, "0")}. {title}</a></li>)}</ol></nav>
-      </CardContent></Card>
-      {briefSections.map(([id, title], index) => <Card key={id} id={`brief-${id}`} className="min-w-0 scroll-mt-24"><CardHeader><CardTitle><h2>{String(index + 1).padStart(2, "0")}. {title}</h2></CardTitle></CardHeader><CardContent className="space-y-4 break-words text-sm leading-relaxed [overflow-wrap:anywhere]">{sections[id]}</CardContent></Card>)}
-    </div>
+    <article id="document-start" tabIndex={-1} aria-label="Document du cahier des charges" className="min-w-0 rounded-xl border bg-background px-5 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-7">
+      {briefSections.map(([id, title], index) => <section key={id} id={`brief-${id}`} data-brief-section tabIndex={-1} aria-labelledby={`section-heading-${id}`} className="min-w-0 scroll-mt-24 space-y-5 border-b py-7 outline-none last:border-b-0 focus-visible:ring-2 focus-visible:ring-ring">
+        <div className="flex items-baseline gap-3"><span className="text-xs font-medium tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span><h2 id={`section-heading-${id}`} className="break-words text-lg font-semibold tracking-tight [overflow-wrap:anywhere]">{title}</h2></div>
+        <div className="space-y-4 break-words text-sm leading-relaxed [overflow-wrap:anywhere]">{sections[id]}</div>
+      </section>)}
+    </article>
   );
 }

@@ -86,6 +86,19 @@ export async function listBriefs(ownerId: string, rawProjectId: string) {
   return { briefs: rows.map(present), readiness: snapshot.readiness };
 }
 
+// The reader needs only version headers, not the JSON document of every old version.
+export async function getBriefReaderContext(ownerId: string, rawProjectId: string) {
+  const projectId = projectIdSchema.parse(rawProjectId);
+  const snapshot = await sourceSnapshot(prisma, ownerId, projectId, "fr");
+  const rows = await prisma.$queryRaw<{ id: string; title: string; createdAt: Date; generation: Prisma.JsonValue }[]>`
+    SELECT b."id", b."title", b."createdAt", b."json"->'generation' AS "generation"
+    FROM "Brief" b JOIN "Project" p ON p."id" = b."projectId"
+    WHERE b."projectId" = ${projectId} AND p."ownerId" = ${ownerId}
+    ORDER BY b."createdAt" DESC, b."id" DESC LIMIT 50
+  `;
+  return { readiness: snapshot.readiness, briefs: rows.map((row) => present({ ...row, json: { generation: row.generation } })) };
+}
+
 export async function getBrief(ownerId: string, rawProjectId: string, rawBriefId: string) {
   const projectId = projectIdSchema.parse(rawProjectId), briefId = projectIdSchema.parse(rawBriefId);
   await owned(prisma, ownerId, projectId);

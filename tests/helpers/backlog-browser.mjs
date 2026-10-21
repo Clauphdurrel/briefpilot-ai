@@ -42,6 +42,9 @@ export async function checkBacklogBrowser({ base, token, projectId, briefId, bef
     await cdp("Page.navigate", { url: `${base}/dashboard/projects/${projectId}/briefs/${briefId}` });
     await waitFor("document.readyState === 'complete' && !!document.querySelector('input[type=checkbox]')");
     await delay(300);
+    await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Analyse et actions')?.click(); true");
+    await waitFor("getComputedStyle(document.querySelector('#document-insights')).display!=='none'");
+    assert.ok((await evaluate('document.body.textContent')).includes('ancienne version'));
     await evaluate("document.querySelector('input[type=checkbox]').click(); true");
     await waitFor("!![...document.querySelectorAll('button')].find(b => b.textContent === 'Générer le backlog' && !b.disabled)");
     await evaluate("[...document.querySelectorAll('button')].find(b => b.textContent === 'Générer le backlog').click(); true");

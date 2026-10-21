@@ -159,6 +159,20 @@ test("brief reader shows both versions, sections and draft labels in the authent
   assert.ok((await workspace.text()).includes(firstId));
 });
 
+test("brief reader rejects anonymous, foreign-owner and cross-project document access", async () => {
+  const path = `/dashboard/projects/${projects[0]}/briefs/${firstId}`;
+  assert.equal((await fetch(`${base}${path}`, { redirect: "manual" })).status, 307);
+  const foreign = await fetch(`${base}${path}`, { headers: { Cookie: `authjs.session-token=${tokens[1]}` } });
+  // A streamed App Router page can send its 200 headers before notFound is resolved.
+  assert.ok([200,404].includes(foreign.status));
+  const denied = await foreign.text(); assert.ok(denied.includes("Projet introuvable")); assert.ok(!denied.includes("Gestion des disponibilités"));
+  assert.equal((await api(projects[0], "GET", undefined, tokens[1], firstId)).status, 404);
+  const wrongProject = await fetch(`${base}/dashboard/projects/${projects[1]}/briefs/${firstId}`, { headers: { Cookie: `authjs.session-token=${tokens[1]}` } });
+  assert.ok([200,404].includes(wrongProject.status));
+  const wrongBody = await wrongProject.text(); assert.ok(wrongBody.includes("Projet introuvable")); assert.ok(!wrongBody.includes("Gestion des disponibilités"));
+  assert.equal((await api(projects[1], "GET", undefined, tokens[1], firstId)).status, 404);
+});
+
 test("brief generation and reader work in Chrome on mobile and desktop", { skip: process.env.BRIEF_VISUAL_TEST !== "1" }, async () => {
   const { checkBriefBrowser } = await import("./helpers/brief-browser.mjs");
   await checkBriefBrowser({ base, token: tokens[2], projectId: projects[2], onNewAnswers: async () => { await ageRequests(projects[2]); await seedInterview(projects[2], true); } });
