@@ -53,6 +53,7 @@ export function InterviewChat({ projectId, initialState }: { projectId: string; 
       if (mode === "message" || (mode === "refresh" && parsed.data.data.messages.length > state.messages.length &&
         [...parsed.data.data.messages].reverse().find((item) => item.role === "user")?.content === content)) setDraft("");
       setState(parsed.data.data);
+      window.dispatchEvent(new Event("briefpilot:interview-updated"));
       operation.current = null;
     } catch (failure) {
       setError(failure instanceof ChatError

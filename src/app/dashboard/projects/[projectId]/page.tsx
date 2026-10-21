@@ -33,6 +33,7 @@ export default async function ProjectDetailPage({
         </div>
         <div className="w-full space-y-2 sm:w-auto sm:shrink-0">
           <Button asChild><Link href={`/dashboard/projects/${project.id}/interview`}>Lancer l’interview IA</Link></Button>
+          <Button asChild variant="outline"><Link href={`/dashboard/projects/${project.id}/briefs`}>Cahiers des charges</Link></Button>
         </div>
       </div>
       <Card>

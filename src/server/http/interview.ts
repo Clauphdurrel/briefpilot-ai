@@ -16,9 +16,9 @@ export async function withInterviewAccess(
 ) {
   try {
     const session = await auth();
-    if (!session?.user?.email) throw new InterviewError("UNAUTHENTICATED", 401, "Connecte-toi pour accéder à l’interview.");
+    if (!session?.user?.email) throw new InterviewError("UNAUTHENTICATED", 401, "Connecte-toi pour accéder au projet.");
     const user = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } });
-    if (!user) throw new InterviewError("UNAUTHENTICATED", 401, "Connecte-toi pour accéder à l’interview.");
+    if (!user) throw new InterviewError("UNAUTHENTICATED", 401, "Connecte-toi pour accéder au projet.");
     const projectId = projectIdSchema.parse((await context.params).projectId);
     if (request.method !== "GET") {
       const origin = request.headers.get("origin");
@@ -30,13 +30,15 @@ export async function withInterviewAccess(
     return NextResponse.json({ data }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const known = error instanceof InterviewError ? error : error instanceof ZodError
-      ? new InterviewError("INVALID_INPUT", 400, "Données invalides. Vérifie ta réponse (4 000 caractères maximum).")
-      : new InterviewError("INTERNAL_ERROR", 500, "L’interview est momentanément indisponible. Réessaie.");
+      ? new InterviewError("INVALID_INPUT", 400, "Données invalides. Vérifie les champs de la demande.")
+      : new InterviewError("INTERNAL_ERROR", 500, "Le service est momentanément indisponible. Réessaie.");
     return NextResponse.json({ error: { code: known.code, message: known.message } }, {
       status: known.status, headers: { "Cache-Control": "no-store", ...(known.status === 429 ? { "Retry-After": "60" } : {}) },
     });
   }
 }
+
+export { withInterviewAccess as withProjectAccess, readInterviewBody as readJsonBody };
 
 export async function readInterviewBody(request: Request): Promise<unknown> {
   if (!request.headers.get("content-type")?.startsWith("application/json")) {

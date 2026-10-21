@@ -13,7 +13,7 @@ const configSchema = z.object({
 export function getOpenAI() {
   const parsed = configSchema.safeParse(process.env);
   if (!parsed.success || /ta-cle|change-me/.test(parsed.data.OPENAI_API_KEY)) {
-    throw new InterviewError("AI_NOT_CONFIGURED", 503, "L’interview IA n’est pas encore configurée. Contacte l’administrateur.");
+    throw new InterviewError("AI_NOT_CONFIGURED", 503, "Le service IA n’est pas encore configuré. Contacte l’administrateur.");
   }
   return {
     client: new OpenAI({ apiKey: parsed.data.OPENAI_API_KEY, timeout: 45000, maxRetries: 0 }),
