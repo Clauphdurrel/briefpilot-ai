@@ -88,7 +88,7 @@ export function GenerateBriefButton({ projectId, readiness: initialReadiness, re
         {showContinueLink && <Button asChild variant="outline"><Link href={`/dashboard/projects/${projectId}/interview`}>Continuer l’interview</Link></Button>}
       </div>
       {pending && <p role="status" className="text-sm text-muted-foreground">Le document est en préparation. Cette opération peut prendre quelques secondes.</p>}
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-sm text-destructive">{error} <Link href="/pricing" className="underline">Voir les offres</Link></p>}
     </div>
   );
 }

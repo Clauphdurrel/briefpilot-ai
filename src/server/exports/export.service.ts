@@ -1,7 +1,7 @@
 import "server-only";
 
 import { InterviewError } from "@/server/ai/errors";
-import { getBrief } from "@/server/services/brief.service";
+import { getBrief, getBriefForSource } from "@/server/services/brief.service";
 import { getBacklogById } from "@/server/services/backlog.service";
 import { containsCredential } from "@/server/formatters/codex-task";
 import { storedBriefSchema } from "@/server/validators/brief-generator.schema";
@@ -29,7 +29,7 @@ export async function exportBriefMarkdown(ownerId: string, projectId: string, br
 }
 async function loadBacklog(ownerId: string, projectId: string, backlogId: string) {
   const row = await getBacklogById(ownerId, projectId, backlogId);
-  const brief = await getBrief(ownerId, projectId, row.sourceBriefId);
+  const brief = await getBriefForSource(ownerId, projectId, row.sourceBriefId);
   const parsed = storedBacklogSchema.safeParse({ schemaVersion: row.schemaVersion, document: row.document, generation: row.generation });
   if (!parsed.success || row.generation.sourceBriefVersion !== brief.generation.version) throw new InterviewError("EXPORT_INVALID_DOCUMENT", 422, "Le backlog et sa version de cahier des charges ne sont pas cohérents.");
   rejectSensitiveData({ document: parsed.data.document, projectName: parsed.data.generation.projectName });

@@ -170,3 +170,7 @@ it("loads reader version headers without loading other documents", async () => {
   expect(sql).toContain('p."ownerId"');
   expect((mocks.client.brief as { findMany: ReturnType<typeof vi.fn> }).findMany).not.toHaveBeenCalled();
 });
+
+vi.mock("@/server/services/usage.service", () => ({ reserveUsage: vi.fn(async () => ({ id: "quota-ticket", userId: "owner" })) }));
+vi.mock("@/server/ai/usage-context", () => ({ runMetered: (_ticket: unknown, action: () => Promise<unknown>) => action() }));
+vi.mock("@/server/services/history-access.service", () => ({ historyLimit: async () => 50, assertHistoryAccess: async () => {} }));

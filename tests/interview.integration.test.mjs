@@ -1,3 +1,4 @@
+import {grantTestPlan} from "./helpers/billing-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -22,6 +23,7 @@ let child, mock, calls = 0, state, startId;
 before(async () => {
   for (const [id, session] of [[owner, token], [other, otherToken]]) {
     await pool.query('INSERT INTO "User" (id,email,"updatedAt") VALUES ($1,$2,NOW())', [id, `interview-test-${id}@example.invalid`]);
+    await grantTestPlan(pool, id);
     await pool.query('INSERT INTO "Session" (id,"sessionToken","userId",expires) VALUES ($1,$2,$3,NOW()+INTERVAL \'1 hour\')', [randomUUID(), session, id]);
   }
   for (const [id, userId, name] of [[project, owner, "Immo test"], [foreignProject, other, "Projet privé"], [failureProject, other, "Quota fixture"]]) {

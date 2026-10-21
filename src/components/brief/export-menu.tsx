@@ -27,9 +27,9 @@ export function ExportMenu({ projectId, briefId, backlogId }: { projectId: strin
     controller.current = new AbortController();
     const timer = setTimeout(() => controller.current?.abort(), 60000);
     try {
-      const response = await fetch(path, { cache: "no-store", signal: controller.current.signal });
+      const response = await fetch(path, { cache: "no-store", ...(format === "pdf" ? { headers: { "Idempotency-Key": crypto.randomUUID() } } : {}), signal: controller.current.signal });
       if (!response.ok) {
-        const message = response.status === 401 ? "Ta session a expiré. Reconnecte-toi pour télécharger ce document." : response.status === 404 ? "Cette version n’est plus disponible ou tu n’y as pas accès." : response.status === 422 ? "Cette version ne peut pas être exportée. Vérifie les données du document avant de réessayer." : "Le téléchargement est momentanément indisponible. Réessaie.";
+        const message = response.status === 401 ? "Ta session a expiré. Reconnecte-toi pour télécharger ce document." : response.status === 404 ? "Cette version n’est plus disponible ou tu n’y as pas accès." : response.status === 429 ? "Le quota PDF est atteint ou un export est en cours. Consulte les offres ou réessaie plus tard." : response.status === 403 ? "Cette version nécessite un accès à l’historique complet. Consulte les offres." : response.status === 422 ? "Cette version ne peut pas être exportée. Vérifie les données du document avant de réessayer." : "Le téléchargement est momentanément indisponible. Réessaie.";
         throw new DownloadError(message, response.status === 401);
       }
       const disposition = response.headers.get("content-disposition") ?? "";
@@ -55,6 +55,6 @@ export function ExportMenu({ projectId, briefId, backlogId }: { projectId: strin
       {backlogId && <DropdownMenuItem disabled={pending} onSelect={() => void download(`${base}/pdf/backlog/${encodeURIComponent(backlogId)}`, "pdf")}>Télécharger le backlog PDF</DropdownMenuItem>}
     </DropdownMenuContent></DropdownMenu>
     {notice && <p role="status" className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">{notice}</p>}
-    {error && <div role="alert" className="space-y-1 text-xs text-destructive"><p>{error.message}</p>{error.expired && <Link href="/login" className="underline">Se reconnecter</Link>}</div>}
+    {error && <div role="alert" className="space-y-1 text-xs text-destructive"><p>{error.message}</p><Link href="/pricing" className="underline">Voir les offres</Link>{error.expired && <Link href="/login" className="underline">Se reconnecter</Link>}</div>}
   </div>;
 }

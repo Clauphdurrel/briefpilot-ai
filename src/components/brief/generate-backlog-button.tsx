@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,6 @@ export function GenerateBacklogButton({ projectId, sourceBriefId, requiresDraft,
     {requiresDraft && <div className="space-y-2 text-sm"><p className="text-muted-foreground">Ce brief est incomplet ou contient des hypothèses. Le backlog restera un brouillon à valider ; les manques seront conservés.</p><Label htmlFor={checkboxId} className="flex items-start gap-2"><input id={checkboxId} type="checkbox" checked={allowDraft} onChange={(event) => setAllowDraft(event.target.checked)} disabled={pending || disabled} className="mt-0.5" />J’accepte de générer un backlog brouillon.</Label></div>}
     {regenerate && <p className="text-sm text-muted-foreground">Une régénération crée une nouvelle version et utilise un appel IA. Les versions précédentes sont conservées.</p>}
     <Button onClick={generate} disabled={pending || disabled || (requiresDraft && !allowDraft)} aria-busy={pending}>{pending ? "Génération du backlog…" : regenerate ? "Régénérer le backlog" : "Générer le backlog"}</Button>
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    {error && <p role="alert" className="text-sm text-destructive">{error} <Link href="/pricing" className="underline">Voir les offres</Link></p>}
   </div>;
 }

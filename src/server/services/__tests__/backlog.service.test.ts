@@ -129,3 +129,7 @@ it("revalidates the graph and rejects credential-like output before persistence"
 it("does not expose backlog identifiers from another project", async () => {
   await expect(getBacklogById("owner", project.id, "foreign-id")).rejects.toMatchObject({ code: "BACKLOG_NOT_FOUND" });
 });
+
+vi.mock("@/server/services/usage.service", () => ({ reserveUsage: vi.fn(async () => ({ id: "quota-ticket", userId: "owner" })) }));
+vi.mock("@/server/ai/usage-context", () => ({ runMetered: (_ticket: unknown, action: () => Promise<unknown>) => action() }));
+vi.mock("@/server/services/history-access.service", () => ({ historyLimit: async () => 50, assertHistoryAccess: async () => {} }));

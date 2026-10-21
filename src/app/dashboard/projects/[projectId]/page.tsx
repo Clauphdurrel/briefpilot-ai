@@ -1,3 +1,4 @@
+import { ProjectCapacityAction } from "@/components/billing/project-capacity-action";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -37,6 +38,7 @@ export default async function ProjectDetailPage({
           <Button asChild variant="outline"><Link href={`/dashboard/projects/${project.id}/backlogs`}>Backlogs de développement</Link></Button>
         </div>
       </div>
+      <ProjectCapacityAction projectId={project.id} archived={project.status === "ARCHIVED"} />
       <Card>
         <CardHeader><CardTitle><h2>Description</h2></CardTitle></CardHeader>
         <CardContent>

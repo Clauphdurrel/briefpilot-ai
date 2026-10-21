@@ -40,3 +40,10 @@ it("refuses header injection and non PDF results", () => {
   expect(() => pdfResponse({ content: Buffer.from("%PDF-x"), filename: 'x.pdf"\r\nInjected: yes' })).toThrow();
   expect(() => pdfResponse({ content: Buffer.from("html"), filename: "x.pdf" })).toThrow();
 });
+
+it("accepts a controlled PDF operation key and refuses malformed keys", async () => {
+  const operationId = "00000000-0000-4000-8000-000000000001";
+  const req = new Request("http://localhost/pdf", { headers: { "Idempotency-Key": operationId } });
+  await brief(req, context); expect(generateBriefPdf).toHaveBeenCalledWith("owner", "project-1", "brief-old", operationId);
+  expect((await brief(new Request("http://localhost/pdf", { headers: { "Idempotency-Key": "not-valid" } }), context)).status).toBe(400);
+});

@@ -197,3 +197,7 @@ describe("interview persistence and permissions", () => {
     expect(context.previousAnalysis).toEqual(turn);
   });
 });
+
+vi.mock("@/server/services/usage.service", () => ({ reserveUsage: vi.fn(async () => ({ id: "quota-ticket", userId: "owner" })) }));
+vi.mock("@/server/ai/usage-context", () => ({ runMetered: (_ticket: unknown, action: () => Promise<unknown>) => action() }));
+vi.mock("@/server/services/history-access.service", () => ({ historyLimit: async () => 50, assertHistoryAccess: async () => {} }));

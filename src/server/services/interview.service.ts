@@ -1,4 +1,6 @@
 import "server-only";
+import { reserveUsage } from "./usage.service";
+import { runMetered } from "@/server/ai/usage-context";
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -141,17 +143,18 @@ export async function advanceInterview(
       create: { id: ledgerId, projectId, role: "system", content: "", metadata: json(metadata), createdAt: now },
       update: { metadata: json(metadata), createdAt: now },
     });
-    return { kind: "claimed" as const, project, messages, metadata };
+    const usage = await reserveUsage(ownerId, "AI_INTERVIEW", `${ledgerId}:${metadata.attempts}`, tx);
+    return { kind: "claimed" as const, usage, project, messages, metadata };
   });
   if (claim.kind === "cached") return claim.snapshot;
 
   try {
     const previousAnalysis = lastAnalysis(claim.messages);
-    const { analysis, model } = await runInterviewClientAgent({
+    const { analysis, model } = await runMetered(claim.usage, () => runInterviewClientAgent({
       project: { name: claim.project.name, type: claim.project.type, description: claim.project.description },
       history: boundedHistory(claim.messages, content), knownInformation: previousAnalysis?.knownInformation ?? [],
       previousAnalysis, language: input.language,
-    });
+    }));
     return await prisma.$transaction(async (tx) => {
       await lockOwner(tx, ownerId);
       await ownedProject(tx, ownerId, projectId);

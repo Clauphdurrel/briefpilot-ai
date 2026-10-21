@@ -40,6 +40,9 @@ model User {
   accounts Account[]
   sessions Session[]
   projects Project[]
+  subscription Subscription?
+  usageCounters UsageCounter[]
+  usageEvents UsageEvent[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -182,4 +185,80 @@ model BacklogGeneration {
 
   @@unique([projectId, requestId])
   @@index([projectId, lastAttemptAt])
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  AGENCY
+  ENTERPRISE
+}
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+enum SubscriptionProvider {
+  NONE
+  STRIPE
+}
+enum UsageResource {
+  AI_INTERVIEW
+  AI_BRIEF
+  AI_BACKLOG
+  PDF_EXPORT
+  ACTIVE_PROJECTS
+}
+enum UsageStatus {
+  RESERVED
+  STARTED
+  COMMITTED
+  RELEASED
+}
+model Subscription {
+  id String @id @default(cuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan @default(FREE)
+  status SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime
+  currentPeriodEnd DateTime
+  provider SubscriptionProvider @default(NONE)
+  providerCustomerId String?
+  providerSubscriptionId String? @unique
+  limitOverrides Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model UsageCounter {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource UsageResource
+  periodStart DateTime
+  periodEnd DateTime
+  used Int @default(0)
+  reserved Int @default(0)
+  events UsageEvent[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, resource, periodStart, periodEnd])
+}
+model UsageEvent {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource UsageResource
+  operationId String
+  status UsageStatus @default(RESERVED)
+  units Int @default(1)
+  counterId String
+  counter UsageCounter @relation(fields: [counterId], references: [id], onDelete: Cascade)
+  leaseUntil DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, resource, operationId])
+  @@index([userId, status, leaseUntil])
 }

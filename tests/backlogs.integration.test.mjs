@@ -1,3 +1,4 @@
+import {grantTestPlan} from "./helpers/billing-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -26,6 +27,7 @@ const sourceJson = (draft = true) => {
 before(async () => {
   for (let i = 0; i < owners.length; i++) {
     await pool.query('INSERT INTO "User" (id,email,"updatedAt") VALUES ($1,$2,NOW())', [owners[i], `backlog-test-${owners[i]}@example.invalid`]);
+    await grantTestPlan(pool, owners[i]);
     await pool.query('INSERT INTO "Session" (id,"sessionToken","userId",expires) VALUES ($1,$2,$3,NOW()+INTERVAL \'1 hour\')', [randomUUID(), tokens[i], owners[i]]);
     await pool.query('INSERT INTO "Project" (id,name,type,description,status,"ownerId","updatedAt") VALUES ($1,\'Restaurant intégration\',\'WEBSITE\',\'Réservation de tables\',\'BRIEF_GENERATED\',$2,NOW())', [projects[i], owners[i]]);
     await pool.query('INSERT INTO "Brief" (id,title,content,json,"projectId","updatedAt") VALUES ($1,\'Cahier des charges\',\'fixture\',$2,$3,NOW())', [briefs[i], sourceJson(), projects[i]]);

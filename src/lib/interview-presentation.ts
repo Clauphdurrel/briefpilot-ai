@@ -36,6 +36,7 @@ export function collectedContents(state: InterviewState): InterviewContent[] {
 }
 
 export function interviewErrorMessage(code: string, status?: number): string {
+  if (code === "QUOTA_EXCEEDED") return "Ton quota de réponses IA pour cette période est atteint. Consulte les offres ou attends la remise à zéro. Ta réponse est conservée.";
   if (status === 401 || code === "UNAUTHENTICATED") return "Ta session a expiré. Reconnecte-toi pour reprendre l’interview. Ta réponse reste dans le champ de saisie.";
   if (status === 404 || code === "PROJECT_NOT_FOUND") return "Ce projet n’est plus accessible. Retourne à la liste des projets.";
   if (["AI_TIMEOUT", "TIMEOUT"].includes(code)) return "La réponse prend trop de temps. Actualise l’historique avant de réessayer : elle a peut-être été enregistrée.";

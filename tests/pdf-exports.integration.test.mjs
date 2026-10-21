@@ -1,3 +1,4 @@
+import {grantTestPlan} from "./helpers/billing-fixture.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID, createHash } from "node:crypto";
@@ -39,6 +40,7 @@ async function digest() {
 before(async()=>{
   for(let i=0;i<owners.length;i++) {
     await pool.query('INSERT INTO "User" (id,email,"updatedAt") VALUES ($1,$2,NOW())',[owners[i],`export-test-${owners[i]}@example.invalid`]);
+    await grantTestPlan(pool, owners[i]);
     await pool.query('INSERT INTO "Session" (id,"sessionToken","userId",expires) VALUES ($1,$2,$3,NOW()+INTERVAL \'1 hour\')',[randomUUID(),tokens[i],owners[i]]);
     await pool.query('INSERT INTO "Project" (id,name,type,"ownerId","updatedAt") VALUES ($1,\'Réservations à Évry\',\'WEBSITE\',$2,NOW())',[projects[i],owners[i]]);
   }

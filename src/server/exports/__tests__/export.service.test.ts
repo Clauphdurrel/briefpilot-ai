@@ -5,7 +5,7 @@ import { InterviewError } from "@/server/ai/errors";
 import { exportBacklogMarkdown, exportBriefMarkdown, exportCodexTasksMarkdown } from "../export.service";
 import { briefFixture, storedBacklogFixture } from "./export-fixtures";
 
-vi.mock("@/server/services/brief.service", () => ({ getBrief: vi.fn() }));
+vi.mock("@/server/services/brief.service", () => { const read = vi.fn(); return { getBrief: read, getBriefForSource: read }; });
 vi.mock("@/server/services/backlog.service", () => ({ getBacklogById: vi.fn() }));
 const ref = { id: "b-1", version: 3, status: "DRAFT" as const, sourceBriefId: "brief-old", createdAt: "2026-10-21T11:00:00Z" };
 beforeEach(() => {

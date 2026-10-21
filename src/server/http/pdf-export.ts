@@ -16,3 +16,8 @@ export function pdfQuery(request: Request, project = false): { briefId?: string;
   if ([...params.keys()].some((key) => params.getAll(key).length !== 1)) throw new z.ZodError([]);
   return (project ? z.strictObject({ briefId: projectIdSchema, backlogId: projectIdSchema.optional() }) : z.strictObject({})).parse(Object.fromEntries(params));
 }
+
+export function pdfOperationKey(request: Request): string | undefined {
+  const value = request.headers.get("Idempotency-Key");
+  return value === null ? undefined : z.uuid().parse(value);
+}

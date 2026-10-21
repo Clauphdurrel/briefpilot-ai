@@ -1,4 +1,7 @@
 import "server-only";
+import { historyLimit, assertHistoryAccess } from "./history-access.service";
+import { reserveUsage } from "./usage.service";
+import { runMetered } from "@/server/ai/usage-context";
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -82,7 +85,7 @@ function present(row: { id: string; title: string; createdAt: Date; json: Prisma
 export async function listBriefs(ownerId: string, rawProjectId: string) {
   const projectId = projectIdSchema.parse(rawProjectId);
   const snapshot = await sourceSnapshot(prisma, ownerId, projectId, "fr");
-  const rows = await prisma.brief.findMany({ where: { projectId }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50, select: { id: true, title: true, createdAt: true, json: true } });
+  const rows = await prisma.brief.findMany({ where: { projectId }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: await historyLimit(ownerId), select: { id: true, title: true, createdAt: true, json: true } });
   return { briefs: rows.map(present), readiness: snapshot.readiness };
 }
 
@@ -94,12 +97,12 @@ export async function getBriefReaderContext(ownerId: string, rawProjectId: strin
     SELECT b."id", b."title", b."createdAt", b."json"->'generation' AS "generation"
     FROM "Brief" b JOIN "Project" p ON p."id" = b."projectId"
     WHERE b."projectId" = ${projectId} AND p."ownerId" = ${ownerId}
-    ORDER BY b."createdAt" DESC, b."id" DESC LIMIT 50
+    ORDER BY b."createdAt" DESC, b."id" DESC LIMIT ${await historyLimit(ownerId)}
   `;
   return { readiness: snapshot.readiness, briefs: rows.map((row) => present({ ...row, json: { generation: row.generation } })) };
 }
 
-export async function getBrief(ownerId: string, rawProjectId: string, rawBriefId: string) {
+export async function getBriefForSource(ownerId: string, rawProjectId: string, rawBriefId: string) {
   const projectId = projectIdSchema.parse(rawProjectId), briefId = projectIdSchema.parse(rawBriefId);
   await owned(prisma, ownerId, projectId);
   const row = await prisma.brief.findFirst({ where: { id: briefId, projectId }, select: { id: true, title: true, createdAt: true, json: true } });
@@ -107,6 +110,12 @@ export async function getBrief(ownerId: string, rawProjectId: string, rawBriefId
   const parsed = storedBriefSchema.safeParse(row.json);
   if (!parsed.success) throw new InterviewError("BRIEF_LEGACY_FORMAT", 422, "Ce document utilise un ancien format. Génère une nouvelle version.");
   return { id: row.id, title: row.title, createdAt: row.createdAt.toISOString(), ...parsed.data };
+}
+
+export async function getBrief(ownerId: string, rawProjectId: string, rawBriefId: string) {
+  const row = await getBriefForSource(ownerId, rawProjectId, rawBriefId);
+  await assertHistoryAccess(ownerId, rawProjectId, "brief", rawBriefId);
+  return row;
 }
 
 export async function getLatestBrief(ownerId: string, projectId: string) {
@@ -117,7 +126,8 @@ export async function getLatestBrief(ownerId: string, projectId: string) {
 export async function listWorkspaceBriefs(ownerId: string) {
   const rows = await prisma.brief.findMany({ where: { project: { ownerId } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50,
     select: { id: true, title: true, createdAt: true, json: true, projectId: true, project: { select: { name: true } } } });
-  return rows.map((row) => ({ ...present(row), projectId: row.projectId, projectName: row.project.name }));
+  const limit = await historyLimit(ownerId), counts = new Map<string, number>();
+  return rows.filter((row) => { const count = (counts.get(row.projectId) ?? 0) + 1; counts.set(row.projectId, count); return count <= limit; }).map((row) => ({ ...present(row), projectId: row.projectId, projectName: row.project.name }));
 }
 
 export async function generateBrief(ownerId: string, rawProjectId: string, raw: GenerateBriefRequest) {
@@ -159,12 +169,13 @@ export async function generateBrief(ownerId: string, rawProjectId: string, raw: 
     const metadata: z.infer<typeof ledgerSchema> = { kind: "brief_request", requestId: request.requestId, hash: payloadHash, sourceRevision: snapshot.sourceRevision,
       status: "pending", attempts: (previous?.attempts ?? 0) + 1, leaseUntil: new Date(now.getTime() + 90000).toISOString(), briefId: null };
     await tx.interviewMessage.upsert({ where: { id: ledgerId }, create: { id: ledgerId, projectId, role: "system", content: "", metadata: json(metadata), createdAt: now }, update: { metadata: json(metadata), createdAt: now } });
-    return { kind: "claimed" as const, snapshot, context, metadata };
+    const usage = await reserveUsage(ownerId, "AI_BRIEF", `${ledgerId}:${metadata.attempts}`, tx);
+    return { kind: "claimed" as const, usage, snapshot, context, metadata };
   });
   if (claim.kind === "cached") return { briefId: claim.briefId, reused: true };
 
   try {
-    const result = await runBriefGeneratorAgent(claim.context.input);
+    const result = await runMetered(claim.usage, () => runBriefGeneratorAgent(claim.context.input));
     const document = generatedBriefSchema.parse(result.document);
     validateBriefSources(document, claim.context.input.sources);
     // Keep source gaps visible even if the model omits them in its output.

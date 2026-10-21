@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useActionState } from "react";
 
@@ -20,6 +21,7 @@ export function CreateProjectForm() {
     <Card>
       <CardHeader><CardTitle><h2>Nouveau projet</h2></CardTitle></CardHeader>
       <CardContent>
+        {state.quotaExceeded && <Link href="/pricing" className="text-sm underline">Voir les offres</Link>}
         <form action={action} aria-busy={pending} className="space-y-5">
           {state.message && <p role="alert" className="text-sm text-destructive">{state.message}</p>}
           <fieldset disabled={pending} className="min-w-0 space-y-5">

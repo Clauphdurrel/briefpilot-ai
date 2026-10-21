@@ -4,7 +4,7 @@ import { getBacklogById } from "@/server/services/backlog.service";
 import { briefFixture, storedBacklogFixture } from "../../__tests__/export-fixtures";
 import { renderPdf } from "../pdf-renderer";
 import { generateBriefPdf, generateBacklogPdf, generateProjectPdf } from "../pdf.service";
-vi.mock("@/server/services/brief.service", () => ({ getBrief: vi.fn() }));
+vi.mock("@/server/services/brief.service", () => { const read = vi.fn(); return { getBrief: read, getBriefForSource: read }; });
 vi.mock("@/server/services/backlog.service", () => ({ getBacklogById: vi.fn() }));
 vi.mock("../pdf-renderer", () => ({ renderPdf: vi.fn() }));
 beforeEach(() => {
@@ -47,3 +47,5 @@ it("validates graph cycles before rendering", async () => {
   const row = await getBacklogById("o", "p", "b"); row.document.tasks[0].dependencies = ["T-002"];
   await expect(generateBacklogPdf("o", "p", "b")).rejects.toMatchObject({ status: 422 }); expect(renderPdf).not.toHaveBeenCalled();
 });
+
+vi.mock("@/server/services/usage.service", () => ({ reserveUsage: async () => ({ id: "ticket", userId: "owner" }), startUsage: async () => {}, commitUsage: async () => {}, releaseUsage: async () => {} }));

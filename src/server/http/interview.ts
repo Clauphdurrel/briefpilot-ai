@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
+import { QuotaError } from "@/server/services/usage.service";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { InterviewError } from "@/server/ai/errors";
@@ -34,7 +35,7 @@ export async function withInterviewAccess<T>(
     const known = error instanceof InterviewError ? error : error instanceof ZodError
       ? new InterviewError("INVALID_INPUT", 400, "Données invalides. Vérifie les champs de la demande.")
       : new InterviewError("INTERNAL_ERROR", 500, "Le service est momentanément indisponible. Réessaie.");
-    return NextResponse.json({ error: { code: known.code, message: known.message } }, {
+    return NextResponse.json({ error: { code: known.code, message: known.message, ...(known instanceof QuotaError ? { resource: known.resource, limit: known.limit, used: known.used, reserved: known.reserved, upgradeUrl: "/pricing" } : {}) } }, {
       status: known.status, headers: { "Cache-Control": "no-store", ...(known.status === 429 ? { "Retry-After": "60" } : {}) },
     });
   }

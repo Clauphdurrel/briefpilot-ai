@@ -1,4 +1,7 @@
 import "server-only";
+import { historyLimit, assertHistoryAccess } from "./history-access.service";
+import { reserveUsage } from "./usage.service";
+import { runMetered } from "@/server/ai/usage-context";
 
 import { createHash } from "node:crypto";
 
@@ -44,7 +47,7 @@ const summarySelect = { id: true, version: true, status: true, sourceBriefId: tr
 export async function getProjectBacklogs(ownerId: string, rawProjectId: string) {
   const projectId = projectIdSchema.parse(rawProjectId);
   await owned(prisma, ownerId, projectId);
-  const rows = await prisma.backlog.findMany({ where: { projectId }, orderBy: { version: "desc" }, take: 50, select: summarySelect });
+  const rows = await prisma.backlog.findMany({ where: { projectId }, orderBy: { version: "desc" }, take: await historyLimit(ownerId), select: summarySelect });
   return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
 }
 export async function getBacklogById(ownerId: string, rawProjectId: string, rawBacklogId: string) {
@@ -52,6 +55,7 @@ export async function getBacklogById(ownerId: string, rawProjectId: string, rawB
   await owned(prisma, ownerId, projectId);
   const row = await prisma.backlog.findFirst({ where: { id: backlogId, projectId } });
   if (!row) throw new InterviewError("BACKLOG_NOT_FOUND", 404, "Backlog introuvable.");
+  await assertHistoryAccess(ownerId, projectId, "backlog", backlogId);
   const parsed = storedBacklogSchema.safeParse(row.data);
   if (!parsed.success) throw new InterviewError("BACKLOG_INVALID_STORED", 422, "Ce backlog ne peut pas être affiché. Génère une nouvelle version.");
   return { id: row.id, version: row.version, status: row.status, sourceBriefId: row.sourceBriefId, createdAt: row.createdAt.toISOString(), ...parsed.data };
@@ -68,6 +72,7 @@ export async function generateBacklog(ownerId: string, rawProjectId: string, raw
   const claim = await prisma.$transaction(async (tx) => {
     await lock(tx, ownerId);
     const context = await snapshot(tx, ownerId, projectId, request.sourceBriefId, request.language);
+    await assertHistoryAccess(ownerId, projectId, "brief", request.sourceBriefId);
     const previous = await tx.backlogGeneration.findUnique({ where: key });
     if (previous && previous.payloadHash !== payloadHash) throw new InterviewError("IDEMPOTENCY_CONFLICT", 409, "Cette demande a déjà été utilisée avec un autre contenu.");
     if (previous?.state === "completed" && previous.backlogId) return { kind: "cached" as const, backlogId: previous.backlogId };
@@ -91,11 +96,12 @@ export async function generateBacklog(ownerId: string, rawProjectId: string, raw
     const chargedAt = [...(previous?.chargedAt ?? []), now];
     const reservation = { sourceRevision: context.revision, state: "pending", chargedAt, lastAttemptAt: now, leaseUntil: new Date(now.getTime() + 90000), backlogId: null };
     const ledger = await tx.backlogGeneration.upsert({ where: key, create: { projectId, requestId: request.requestId, payloadHash, ...reservation }, update: reservation });
-    return { kind: "claimed" as const, context, ledgerId: ledger.id, attempt: chargedAt.length };
+    const usage = await reserveUsage(ownerId, "AI_BACKLOG", `${ledger.id}:${chargedAt.length}`, tx);
+    return { kind: "claimed" as const, usage, context, ledgerId: ledger.id, attempt: chargedAt.length };
   });
   if (claim.kind === "cached") return { backlogId: claim.backlogId, reused: true };
   try {
-    const result = await runBacklogGeneratorAgent(claim.context.input);
+    const result = await runMetered(claim.usage, () => runBacklogGeneratorAgent(claim.context.input));
     const document = backlogSchema.parse(result.document);
     try { validateBacklog(document, claim.context.source.document); }
     catch { throw new InterviewError("BACKLOG_INVALID_GRAPH", 502, "Le backlog généré contient des références ou priorités incohérentes."); }

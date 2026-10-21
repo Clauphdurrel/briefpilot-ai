@@ -27,6 +27,7 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ pr
   let brief;
   try { brief = await getBrief(user.id, project.id, briefId.data); }
   catch (error) {
+    if (error instanceof InterviewError && error.code === "FEATURE_UNAVAILABLE") return <div className="space-y-3"><h1 className="text-2xl font-semibold">Historique limité</h1><p>{error.message}</p><Link href="/pricing" className="underline">Voir les offres</Link></div>;
     if (error instanceof InterviewError && error.status === 404) notFound();
     if (error instanceof InterviewError && error.code === "BRIEF_LEGACY_FORMAT") return (
       <Card><CardHeader><CardTitle><h1>Ancien format de document</h1></CardTitle></CardHeader><CardContent className="space-y-3"><p>{error.message}</p><Link href={`/dashboard/projects/${project.id}/briefs`} className="underline">Retour aux versions</Link></CardContent></Card>
