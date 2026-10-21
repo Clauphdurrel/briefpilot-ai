@@ -1,0 +1,140 @@
+{
+  "summary": {
+    "projectName": "Réservations du restaurant",
+    "projectType": "WEBSITE",
+    "objective": "Permettre la réservation des créneaux disponibles.",
+    "scope": "Gestion et consultation des disponibilités ; réservation sans paiement.",
+    "technicalAssumptions": [
+      "Stack et architecture à confirmer après examen du repository."
+    ],
+    "missingInformation": [
+      "Budget",
+      "Délais"
+    ]
+  },
+  "phases": [
+    {
+      "name": "Foundation",
+      "objective": "Confirmer la stack et les conventions."
+    },
+    {
+      "name": "MVP",
+      "objective": "Gérer les disponibilités et prévenir les conflits."
+    },
+    {
+      "name": "V1",
+      "objective": "Améliorations à confirmer avec le client."
+    },
+    {
+      "name": "Future",
+      "objective": "Évolutions hors du périmètre confirmé."
+    }
+  ],
+  "epics": [
+    {
+      "id": "E-001",
+      "title": "Gestion des disponibilités",
+      "description": "Le gestionnaire configure les créneaux disponibles.",
+      "priority": "P0",
+      "phase": "MVP",
+      "dependencies": [],
+      "basis": "confirmed",
+      "sourceFeatureIds": [
+        "F-001"
+      ]
+    }
+  ],
+  "stories": [
+    {
+      "id": "S-001",
+      "epicId": "E-001",
+      "title": "Modifier une disponibilité",
+      "description": "En tant que gestionnaire, je souhaite modifier les créneaux afin de proposer uniquement les disponibilités réelles.",
+      "userRole": "Gestionnaire du restaurant",
+      "businessValue": "Éviter les réservations impossibles.",
+      "priority": "P0",
+      "acceptanceCriteria": [
+        "Un créneau indisponible ne peut pas être réservé."
+      ],
+      "dependencies": [],
+      "basis": "confirmed",
+      "sourceFeatureIds": [
+        "F-001"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T-001",
+      "storyId": "S-001",
+      "epicId": "E-001",
+      "title": "Prévenir les conflits de créneaux",
+      "description": "Définir la contrainte empêchant deux réservations incompatibles sur un créneau. Confirmer le stockage existant avant implémentation.",
+      "role": "backend",
+      "priority": "P0",
+      "estimation": {
+        "complexity": "S",
+        "estimatedEffort": null,
+        "rationale": "Effort indicatif à préciser après inspection du stockage et des conventions."
+      },
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Une seule réservation réussit pour un créneau concurrent."
+      ],
+      "testingRequirements": [
+        "Tester deux requêtes simultanées sur le même créneau."
+      ],
+      "suggestedFiles": [
+        "src/server/services/availability.ts"
+      ],
+      "constraints": [
+        "Respecter les règles du repository et confirmer la stack."
+      ],
+      "risks": [
+        "La stratégie dépend du stockage retenu."
+      ],
+      "codexPrompt": "Lire AGENTS.md et examiner le repository avant cette tâche.",
+      "basis": "confirmed",
+      "sourceFeatureIds": [
+        "F-001"
+      ]
+    },
+    {
+      "id": "T-002",
+      "storyId": "S-001",
+      "epicId": "E-001",
+      "title": "Tester les conflits concurrents",
+      "description": "Vérifier que deux demandes concurrentes ne peuvent pas réserver le même créneau.",
+      "role": "qa",
+      "priority": "P1",
+      "estimation": {
+        "complexity": "S",
+        "estimatedEffort": null,
+        "rationale": "Effort indicatif à préciser après inspection du stockage et des conventions."
+      },
+      "dependencies": [
+        "T-001"
+      ],
+      "acceptanceCriteria": [
+        "Une seule réservation réussit pour un créneau concurrent."
+      ],
+      "testingRequirements": [
+        "Tester deux requêtes simultanées sur le même créneau."
+      ],
+      "suggestedFiles": [
+        "tests/availability.integration.test.ts"
+      ],
+      "constraints": [
+        "Respecter les règles du repository et confirmer la stack."
+      ],
+      "risks": [
+        "La stratégie dépend du stockage retenu."
+      ],
+      "codexPrompt": "Lire AGENTS.md et examiner le repository avant cette tâche.",
+      "basis": "confirmed",
+      "sourceFeatureIds": [
+        "F-001"
+      ]
+    }
+  ]
+}

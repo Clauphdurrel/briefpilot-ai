@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { GenerateBacklogButton } from "@/components/brief/generate-backlog-button";
 import { BriefViewer } from "@/components/brief/brief-viewer";
 import { GenerateBriefButton } from "@/components/brief/generate-brief-button";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,10 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ pr
         {brief.generation.draft && <p className="text-sm text-muted-foreground">Ce brouillon contient des informations manquantes. Il doit être complété et validé avec le client.</p>}
         {brief.generation.sourceRevision !== readiness.sourceRevision && <p className="text-sm text-muted-foreground">Le projet ou l’interview a évolué depuis cette version. Tu peux régénérer le document.</p>}
       </div>
+      <Card><CardHeader><CardTitle><h2>Préparer le développement</h2></CardTitle></CardHeader><CardContent className="space-y-4">
+        <GenerateBacklogButton projectId={project.id} sourceBriefId={brief.id} requiresDraft={brief.generation.draft || brief.document.missingInformation.length > 0 || brief.document.features.some((feature) => ["assumed", "missing"].includes(feature.status))} />
+        <Link className="inline-block text-sm underline" href={`/dashboard/projects/${project.id}/backlogs`}>Consulter les backlogs du projet</Link>
+      </CardContent></Card>
       <BriefViewer document={brief.document} />
       <Card><CardHeader><CardTitle><h2>Actualiser le cahier des charges</h2></CardTitle></CardHeader><CardContent className="space-y-4">
         <GenerateBriefButton projectId={project.id} readiness={readiness} regenerate />

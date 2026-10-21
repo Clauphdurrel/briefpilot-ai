@@ -96,6 +96,8 @@ model Project {
 
   interviews InterviewMessage[]
   briefs     Brief[]
+  backlogs   Backlog[]
+  backlogGenerations BacklogGeneration[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -131,5 +133,53 @@ model Brief {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  backlogs Backlog[]
+
   @@index([projectId])
+  @@unique([id, projectId])
+}
+
+enum BacklogStatus {
+  DRAFT
+  READY
+}
+
+model Backlog {
+  id            String @id @default(cuid())
+  projectId     String
+  sourceBriefId String
+  version       Int
+  status        BacklogStatus
+  data          Json
+  sourceRevision String
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceBrief   Brief @relation(fields: [sourceBriefId, projectId], references: [id, projectId], onDelete: Cascade)
+  generations   BacklogGeneration[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([projectId, version])
+  @@index([sourceBriefId])
+  @@index([projectId, sourceRevision])
+}
+
+// Durable idempotency, leases and actual attempt timestamps, including failed calls.
+model BacklogGeneration {
+  id            String @id @default(cuid())
+  projectId     String
+  requestId     String
+  payloadHash   String
+  sourceRevision String
+  state         String
+  chargedAt     DateTime[] @default([])
+  lastAttemptAt DateTime?
+  leaseUntil    DateTime?
+  backlogId     String?
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  backlog       Backlog? @relation(fields: [backlogId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([projectId, requestId])
+  @@index([projectId, lastAttemptAt])
 }

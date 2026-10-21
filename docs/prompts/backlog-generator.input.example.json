@@ -1,0 +1,284 @@
+{
+  "project": {
+    "name": "Réservations du restaurant",
+    "type": "WEBSITE",
+    "description": "Réservation de tables pour un restaurant."
+  },
+  "brief": {
+    "projectSummary": {
+      "context": {
+        "text": "Le restaurant souhaite organiser ses réservations.",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ]
+      },
+      "executiveSummary": {
+        "text": "Plateforme de réservation pour le restaurant.",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ]
+      },
+      "problem": {
+        "text": "Éviter les réservations de créneaux indisponibles.",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ]
+      }
+    },
+    "businessObjectives": [
+      {
+        "text": "Permettre aux clients de réserver un créneau disponible.",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ]
+      }
+    ],
+    "targetAudience": [
+      {
+        "text": "Clients et gestionnaire du restaurant.",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ]
+      }
+    ],
+    "projectScope": {
+      "included": [
+        {
+          "text": "Réservation et gestion des disponibilités.",
+          "status": "confirmed",
+          "sourceIds": [
+            "message:answer-1"
+          ]
+        }
+      ],
+      "excluded": [],
+      "assumptions": [],
+      "limits": [
+        {
+          "text": "Périmètre à confirmer avec le client.",
+          "status": "recommended",
+          "sourceIds": []
+        }
+      ]
+    },
+    "features": [
+      {
+        "id": "F-001",
+        "name": "Gestion des disponibilités",
+        "description": "Le gestionnaire déclare les créneaux ouverts à la réservation.",
+        "priority": "MUST",
+        "complexity": "unknown",
+        "actor": "Gestionnaire du restaurant",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ],
+        "businessRules": [
+          {
+            "text": "Un créneau indisponible ne peut pas être réservé.",
+            "status": "confirmed",
+            "sourceIds": [
+              "message:answer-1"
+            ]
+          }
+        ],
+        "acceptanceCriteria": [
+          {
+            "text": "Un client ne peut choisir qu’un créneau disponible.",
+            "status": "confirmed",
+            "sourceIds": [
+              "message:answer-1"
+            ]
+          }
+        ],
+        "dependencies": []
+      }
+    ],
+    "pages": [
+      {
+        "id": "P-001",
+        "name": "Réserver",
+        "description": "Choisir un créneau disponible.",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ],
+        "objective": {
+          "text": "Réserver une table.",
+          "status": "confirmed",
+          "sourceIds": [
+            "message:answer-1"
+          ]
+        },
+        "users": [
+          "Client"
+        ],
+        "requiredContent": [
+          {
+            "text": "Horaires et coordonnées du restaurant.",
+            "status": "confirmed",
+            "sourceIds": [
+              "message:answer-1"
+            ]
+          }
+        ],
+        "components": [
+          {
+            "text": "Liste des créneaux disponibles.",
+            "status": "confirmed",
+            "sourceIds": [
+              "message:answer-1"
+            ]
+          }
+        ],
+        "interactions": [
+          {
+            "text": "Choisir un créneau puis confirmer la réservation.",
+            "status": "confirmed",
+            "sourceIds": [
+              "message:answer-1"
+            ]
+          }
+        ]
+      }
+    ],
+    "userJourneys": [
+      {
+        "id": "J-001",
+        "name": "Réserver une table",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ],
+        "steps": [
+          {
+            "text": "Choisir un créneau disponible.",
+            "status": "confirmed",
+            "sourceIds": [
+              "message:answer-1"
+            ]
+          },
+          {
+            "text": "Confirmer sa réservation.",
+            "status": "confirmed",
+            "sourceIds": [
+              "message:answer-1"
+            ]
+          }
+        ],
+        "expectedResult": {
+          "text": "La réservation est enregistrée.",
+          "status": "confirmed",
+          "sourceIds": [
+            "message:answer-1"
+          ]
+        }
+      }
+    ],
+    "userRoles": [
+      {
+        "id": "R-001",
+        "name": "Gestionnaire",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ],
+        "permissions": [
+          {
+            "text": "Modifier les disponibilités.",
+            "status": "confirmed",
+            "sourceIds": [
+              "message:answer-1"
+            ]
+          }
+        ],
+        "restrictions": []
+      }
+    ],
+    "requiredContent": [
+      {
+        "text": "Horaires et coordonnées du restaurant.",
+        "status": "confirmed",
+        "sourceIds": [
+          "message:answer-1"
+        ]
+      }
+    ],
+    "integrations": [],
+    "technicalConstraints": [],
+    "securityRequirements": [
+      {
+        "text": "Vérifier la protection des données de réservation.",
+        "status": "recommended",
+        "sourceIds": []
+      }
+    ],
+    "nonFunctionalRequirements": [
+      {
+        "text": "Vérifier la lisibilité de la réservation sur mobile.",
+        "status": "recommended",
+        "sourceIds": []
+      }
+    ],
+    "regulatoryConsiderations": [
+      {
+        "text": "Faire vérifier les règles applicables aux données personnelles.",
+        "status": "recommended",
+        "sourceIds": []
+      }
+    ],
+    "budgetAndTimeline": {
+      "budget": {
+        "text": "À définir",
+        "status": "missing",
+        "sourceIds": []
+      },
+      "deadlines": [
+        {
+          "text": "À définir",
+          "status": "missing",
+          "sourceIds": []
+        }
+      ],
+      "deliveryConstraints": [],
+      "assumptions": []
+    },
+    "risks": [
+      {
+        "text": "Le budget et le délai ne sont pas renseignés.",
+        "status": "assumed",
+        "sourceIds": []
+      }
+    ],
+    "missingInformation": [
+      {
+        "category": "budget",
+        "description": "Budget non communiqué",
+        "importance": "high",
+        "question": "Quel budget prévoyez-vous ?"
+      },
+      {
+        "category": "timeline",
+        "description": "Date de livraison non communiquée",
+        "importance": "high",
+        "question": "Quelle échéance souhaitez-vous ?"
+      }
+    ],
+    "acceptanceCriteria": [
+      {
+        "text": "Le client valide les parcours de réservation.",
+        "status": "recommended",
+        "sourceIds": []
+      }
+    ],
+    "assumptions": []
+  },
+  "confirmedTechnicalInformation": [],
+  "constraints": [],
+  "language": "fr"
+}

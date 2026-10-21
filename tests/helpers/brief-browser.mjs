@@ -61,7 +61,7 @@ export async function checkBriefBrowser({ base, token, projectId, onNewAnswers }
     await waitFor("document.readyState==='complete' && !![...document.querySelectorAll('button')].find(b => b.textContent === 'Régénérer' && !b.disabled)");
     await delay(300);
     await evaluate("[...document.querySelectorAll('button')].find(b => b.textContent === 'Régénérer').click(); true");
-    await waitFor("location.pathname.includes('/briefs/') && document.body.textContent.includes('Version 2') && !!document.querySelector('#brief-features')");
+    await waitFor(`location.pathname !== ${JSON.stringify(firstPath)} && location.pathname.includes('/briefs/') && document.body.textContent.includes('Version 2') && !!document.querySelector('#brief-features')`);
     assert.notEqual(await evaluate('location.pathname'),firstPath);
     await evaluate("[...document.querySelectorAll('nav[aria-label=\"Versions du cahier des charges\"] a')].find(a => a.textContent === 'Version 1').click(); true");
     await waitFor(`location.pathname === ${JSON.stringify(firstPath)} && document.body.textContent.includes('Brouillon — à compléter')`);
