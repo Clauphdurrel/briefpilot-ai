@@ -42,8 +42,9 @@ before(async () => {
         return;
       }
       await delay(200);
-      const answered = context.conversation.some((item) => item.role === "user");
-      const question = answered ? "Quelles fonctionnalités sont prioritaires pour les agences ?" : "Quels profils utiliseront la plateforme ?";
+      const answerCount = context.conversation.filter((item) => item.role === "user").length;
+      const answered = answerCount > 0;
+      const question = ["Quels profils utiliseront la plateforme ?", "Quelles fonctionnalités sont prioritaires pour les agences ?", "Quel budget souhaitez-vous prévoir ?", "Quels contenus pouvez-vous fournir ?"][answerCount] ?? `Quel autre point souhaitez-vous préciser (${answerCount}) ?`;
       const data = {
         summary: "Plateforme immobilière au Sénégal", message: question,
         knownInformation: answered ? ["Les agences immobilières utiliseront la plateforme."] : [],
@@ -97,7 +98,7 @@ test("real API enforces sessions, ownership and empty history without an AI call
   assert.equal((await api(foreignProject)).status, 404);
   assert.equal((await api(foreignProject, "POST", { requestId: randomUUID() })).status, 404);
   assert.equal((await api(randomUUID())).status, 404);
-  assert.deepEqual((await (await api(project)).json()).data, { messages: [], completionScore: null, missingInformation: [] });
+  assert.deepEqual((await (await api(project)).json()).data, { analysis: null, messages: [], completionScore: null, missingInformation: [] });
   assert.equal(calls, 0);
 });
 

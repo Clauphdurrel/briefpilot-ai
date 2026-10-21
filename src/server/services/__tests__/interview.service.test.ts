@@ -78,7 +78,7 @@ function start(requestId = randomUUID()) { return advanceInterview("owner", proj
 
 describe("interview persistence and permissions", () => {
   it("returns an empty interview without starting a paid call", async () => {
-    expect(await getInterview("owner", project.id)).toEqual({ messages: [], completionScore: null, missingInformation: [] });
+    expect(await getInterview("owner", project.id)).toEqual({ analysis: null, messages: [], completionScore: null, missingInformation: [] });
     expect(runInterviewClientAgent).not.toHaveBeenCalled();
   });
 

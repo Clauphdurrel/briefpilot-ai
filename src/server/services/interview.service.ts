@@ -63,6 +63,7 @@ function state(messages: History): InterviewState {
       id: item.id, role: item.role === "user" ? "user" : "assistant",
       content: item.content, createdAt: item.createdAt.toISOString(),
     })),
+    analysis,
     completionScore: analysis?.completionScore ?? null,
     missingInformation: analysis?.missingInformation ?? [],
   };

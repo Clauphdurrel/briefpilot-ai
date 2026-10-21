@@ -15,8 +15,8 @@ const readinessResponseSchema = z.object({ data: z.object({ readiness: z.object(
   hasInterview: z.boolean(), requiresDraft: z.boolean(), missingInformation: z.array(z.string()), sourceRevision: z.string(),
 }) }) });
 
-export function GenerateBriefButton({ projectId, readiness: initialReadiness, regenerate = false, label }: {
-  projectId: string; readiness: BriefReadiness; regenerate?: boolean; label?: string;
+export function GenerateBriefButton({ projectId, readiness: initialReadiness, regenerate = false, label, disabled = false, onPendingChange, showContinueLink = true }: {
+  projectId: string; readiness: BriefReadiness; regenerate?: boolean; label?: string; disabled?: boolean; onPendingChange?: (pending: boolean) => void; showContinueLink?: boolean;
 }) {
   const router = useRouter();
   const [updatedReadiness, setUpdatedReadiness] = useState<BriefReadiness | null>(null);
@@ -41,8 +41,8 @@ export function GenerateBriefButton({ projectId, readiness: initialReadiness, re
   }, [projectId]);
 
   async function generate() {
-    if (running.current) return;
-    running.current = true; setPending(true); setError("");
+    if (running.current || disabled) return;
+    running.current = true; setPending(true); onPendingChange?.(true); setError("");
     try {
       const signature = JSON.stringify({ allowDraft, sourceRevision: readiness.sourceRevision });
       if (operation.current?.signature !== signature) operation.current = { signature, id: crypto.randomUUID() };
@@ -60,11 +60,11 @@ export function GenerateBriefButton({ projectId, readiness: initialReadiness, re
       router.push(`/dashboard/projects/${projectId}/briefs/${parsed.data.data.briefId}`);
       router.refresh();
     } catch { setError("Connexion interrompue. Consulte les versions avant de réessayer."); }
-    finally { running.current = false; setPending(false); }
+    finally { running.current = false; setPending(false); onPendingChange?.(false); }
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:h-auto [&_button]:min-h-9">
       {!readiness.hasInterview ? (
         <p className="text-sm text-muted-foreground">Démarre l’interview pour préparer ton cahier des charges.</p>
       ) : (
@@ -76,16 +76,16 @@ export function GenerateBriefButton({ projectId, readiness: initialReadiness, re
             </ul>
           )}
           <Label className="flex items-start gap-2 leading-relaxed">
-            <input type="checkbox" checked={allowDraft} onChange={(event) => setAllowDraft(event.target.checked)} disabled={pending} className="mt-1 size-4 shrink-0 accent-primary" />
+            <input type="checkbox" checked={allowDraft} onChange={(event) => setAllowDraft(event.target.checked)} disabled={pending || disabled} className="mt-1 size-4 shrink-0 accent-primary" />
             Autoriser un brouillon si des informations manquent
           </Label>
         </>
       )}
       <div className="flex flex-wrap gap-3">
-        <Button disabled={pending || !readiness.hasInterview || (readiness.requiresDraft && !allowDraft)} onClick={generate}>
+        <Button disabled={pending || disabled || !readiness.hasInterview || (readiness.requiresDraft && !allowDraft)} onClick={generate}>
           {pending ? "Génération en cours…" : label ?? (regenerate ? "Régénérer" : "Générer le cahier des charges")}
         </Button>
-        <Button asChild variant="outline"><Link href={`/dashboard/projects/${projectId}/interview`}>Continuer l’interview</Link></Button>
+        {showContinueLink && <Button asChild variant="outline"><Link href={`/dashboard/projects/${projectId}/interview`}>Continuer l’interview</Link></Button>}
       </div>
       {pending && <p role="status" className="text-sm text-muted-foreground">Le document est en préparation. Cette opération peut prendre quelques secondes.</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

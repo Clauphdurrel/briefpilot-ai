@@ -42,6 +42,7 @@ export async function checkBriefBrowser({ base, token, projectId, onNewAnswers }
     await cdp("Page.navigate", { url: `${base}/dashboard/projects/${projectId}/interview` });
     await waitFor("document.readyState === 'complete' && !!document.querySelector('input[type=checkbox]')");
     await delay(300);
+    await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Suivi du projet')?.click(); true");
     await evaluate("document.querySelector('input[type=checkbox]').click(); true");
     await waitFor("!![...document.querySelectorAll('button')].find(b => b.textContent === 'Générer mon cahier des charges' && !b.disabled)");
     await evaluate("[...document.querySelectorAll('button')].find(b => b.textContent === 'Générer mon cahier des charges').click(); true");

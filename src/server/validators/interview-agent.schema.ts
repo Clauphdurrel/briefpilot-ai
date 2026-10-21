@@ -65,6 +65,7 @@ export const sendInterviewMessageSchema = startInterviewSchema.extend({
 });
 
 export const interviewStateSchema = z.strictObject({
+  analysis: interviewTurnSchema.nullable().optional(),
   messages: z.array(z.strictObject({
     id: z.string(), role: z.enum(["user", "assistant"]), content: z.string(), createdAt: z.iso.datetime(),
   })).max(200),
