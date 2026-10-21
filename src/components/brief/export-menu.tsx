@@ -21,7 +21,7 @@ export function ExportMenu({ projectId, briefId, backlogId }: { projectId: strin
     return () => { mounted.current = false; controller.current?.abort(); allocated.forEach((url) => URL.revokeObjectURL(url)); allocated.clear(); };
   }, []);
   if (!briefId && !backlogId) return <p className="text-xs text-muted-foreground">Aucun document disponible pour l’export.</p>;
-  async function download(path: string) {
+  async function download(path: string, format: "md" | "pdf" = "md") {
     if (running.current) return;
     running.current = true; setPending(true); setError(null); setNotice("");
     controller.current = new AbortController();
@@ -33,10 +33,11 @@ export function ExportMenu({ projectId, briefId, backlogId }: { projectId: strin
         throw new DownloadError(message, response.status === 401);
       }
       const disposition = response.headers.get("content-disposition") ?? "";
-      const filename = /attachment; filename="([a-z0-9][a-z0-9-]{0,120}\.md)"/.exec(disposition)?.[1];
-      if (!filename || !response.headers.get("content-type")?.startsWith("text/markdown")) throw new DownloadError("Le fichier reçu est invalide. Réessaie depuis cette version du document.");
+      const filename = /attachment; filename="([a-z0-9][a-z0-9-]{0,150}\.(?:md|pdf))"/.exec(disposition)?.[1];
+      if (!filename || !filename.endsWith(`.${format}`) || !(format === "pdf" ? response.headers.get("content-type") === "application/pdf" : response.headers.get("content-type")?.startsWith("text/markdown"))) throw new DownloadError("Le fichier reçu est invalide. Réessaie depuis cette version du document.");
       const blob = await response.blob();
       if (!blob.size || blob.size > maxBytes) throw new DownloadError("Le fichier reçu est vide ou trop volumineux.");
+      if (!mounted.current) return;
       const url = URL.createObjectURL(blob); urls.current.add(url);
       const link = document.createElement("a"); link.href = url; link.download = filename; document.body.appendChild(link); link.click(); link.remove();
       setTimeout(() => { URL.revokeObjectURL(url); urls.current.delete(url); }, 1000);
@@ -45,10 +46,13 @@ export function ExportMenu({ projectId, briefId, backlogId }: { projectId: strin
     finally { clearTimeout(timer); running.current = false; if (mounted.current) setPending(false); }
   }
   const base = `/api/projects/${encodeURIComponent(projectId)}/exports`;
-  return <div className="space-y-2" aria-label="Exports Markdown">
+  return <div className="space-y-2" aria-label="Exports Markdown et PDF">
     <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" disabled={pending} aria-busy={pending}>{pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />}{pending ? "Préparation du fichier…" : "Exporter"}</Button></DropdownMenuTrigger><DropdownMenuContent className="w-72 max-w-[calc(100vw-2rem)]" align="start"><DropdownMenuLabel>Version sélectionnée · Markdown</DropdownMenuLabel><DropdownMenuSeparator />
       {briefId && <DropdownMenuItem disabled={pending} onSelect={() => void download(`${base}/brief/${encodeURIComponent(briefId)}`)}>Télécharger le cahier des charges</DropdownMenuItem>}
       {backlogId && <><DropdownMenuItem disabled={pending} onSelect={() => void download(`${base}/backlog/${encodeURIComponent(backlogId)}`)}>Télécharger le backlog</DropdownMenuItem><DropdownMenuItem disabled={pending} onSelect={() => void download(`${base}/backlog/${encodeURIComponent(backlogId)}?format=codex-tasks`)}>Télécharger les tâches Codex</DropdownMenuItem></>}
+      <DropdownMenuSeparator /><DropdownMenuLabel>Version sélectionnée · PDF</DropdownMenuLabel>
+      {briefId && <><DropdownMenuItem disabled={pending} onSelect={() => void download(`${base}/pdf/brief/${encodeURIComponent(briefId)}`, "pdf")}>Télécharger le cahier des charges PDF</DropdownMenuItem><DropdownMenuItem disabled={pending} onSelect={() => void download(`${base}/pdf/project?briefId=${encodeURIComponent(briefId)}${backlogId ? `&backlogId=${encodeURIComponent(backlogId)}` : ""}`, "pdf")}>Télécharger le dossier projet PDF</DropdownMenuItem></>}
+      {backlogId && <DropdownMenuItem disabled={pending} onSelect={() => void download(`${base}/pdf/backlog/${encodeURIComponent(backlogId)}`, "pdf")}>Télécharger le backlog PDF</DropdownMenuItem>}
     </DropdownMenuContent></DropdownMenu>
     {notice && <p role="status" className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">{notice}</p>}
     {error && <div role="alert" className="space-y-1 text-xs text-destructive"><p>{error.message}</p>{error.expired && <Link href="/login" className="underline">Se reconnecter</Link>}</div>}

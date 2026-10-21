@@ -72,7 +72,7 @@ export async function checkMarkdownBrowser({ base, token, projectId, briefId, ba
     const prompts=await download('Télécharger les tâches Codex','codex-tasks-v1.md');assert.ok(prompts.includes(expectedPrompt));
     await evaluate(`window.__savedFetch=window.fetch.bind(window); window.fetch=async()=>new Response(JSON.stringify({error:{message:'private-export-details'}}),{status:500,headers:{'Content-Type':'application/json'}}); true`);
     await menu();await evaluate("[...document.querySelectorAll('[role=menuitem]')].find(item=>item.textContent==='Télécharger le backlog').click(); true");
-    await waitFor("!!document.querySelector('[aria-label=\"Exports Markdown\"] [role=alert]')");
+    await waitFor("!!document.querySelector('[aria-label=\"Exports Markdown et PDF\"] [role=alert]')");
     assert.ok(!(await evaluate('document.body.textContent')).includes('private-export-details'));
     await evaluate('window.fetch=window.__savedFetch; true');
     for(const width of [375,1440]) {
