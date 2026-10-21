@@ -41,7 +41,7 @@ export async function createProject(
   redirect(`/dashboard/projects/${project.id}`);
 }
 
-export async function archiveProject(_state: { message?: string }, data: FormData): Promise<{ message?: string }> {
+export async function archiveProject(_state: { message?: string; success?: boolean }, data: FormData): Promise<{ message?: string; success?: boolean }> {
   const user = await requireUser();
   const id = data.get("projectId"), archived = data.get("archived");
   if (typeof id !== "string" || !["true", "false"].includes(String(archived))) return { message: "Demande invalide." };
@@ -49,6 +49,6 @@ export async function archiveProject(_state: { message?: string }, data: FormDat
     const { setProjectArchived } = await import("@/server/services/project.service");
     await setProjectArchived(user.id, id, archived === "true");
   } catch (error) { return { message: error instanceof QuotaError ? error.message : "Impossible de modifier ce projet. Réessaie." }; }
-  revalidatePath("/dashboard/projects"); revalidatePath(`/dashboard/projects/${id}`); revalidatePath("/dashboard/settings/subscription");
-  return { message: archived === "true" ? "Projet archivé." : "Projet réactivé." };
+  // The client reloads after acknowledgment to refresh all authenticated, dynamic views.
+  return { success: true };
 }

@@ -12,8 +12,9 @@ export async function getUserSubscription(userId: string, db: Prisma.Transaction
 }
 export async function getUserPlan(userId: string, db: Prisma.TransactionClient = prisma, now = new Date()) {
   const subscription = await getUserSubscription(userId, db);
-  const eligible = subscription && planNames.includes(subscription.plan) && ["ACTIVE", "TRIALING"].includes(subscription.status) &&
-    subscription.currentPeriodStart <= now && now < subscription.currentPeriodEnd && subscription.provider === "STRIPE" && !!subscription.providerSubscriptionId;
+  const verifiedProvider = subscription?.provider === "STRIPE" || (subscription?.provider === "LEMONSQUEEZY" && subscription.providerTestMode && !!subscription.providerRevision);
+  const eligible = subscription && planNames.includes(subscription.plan) && (["ACTIVE", "TRIALING"].includes(subscription.status) || (subscription.status === "CANCELED" && subscription.cancelAtPeriodEnd && subscription.provider === "LEMONSQUEEZY")) &&
+    subscription.currentPeriodStart <= now && now < subscription.currentPeriodEnd && verifiedProvider && !!subscription.providerSubscriptionId;
   const plan: PlanName = eligible ? subscription.plan : "FREE";
   const limits = { ...plans[plan].limits };
   if (plan === "ENTERPRISE" && subscription?.limitOverrides) {

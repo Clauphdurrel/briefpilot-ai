@@ -1,16 +1,18 @@
 # Abonnements et quotas du MVP
 
+Évolution étape 19 : le checkout et la gestion Lemon Squeezy sont maintenant disponibles en mode test si la boutique est configurée. Voir [l’intégration et sa procédure de validation](lemon-squeezy-billing.md). Les quotas ci-dessous restent inchangés.
+
 ## Plans et accès
 
 `src/config/plans.ts` centralise les tarifs indicatifs, capacités et fonctionnalités de FREE, PRO, AGENCY et ENTERPRISE. `null` signifie explicitement sans limite de plan ; zéro signifie aucune unité autorisée. Les plafonds de sécurité techniques existants restent applicables.
 
-Sans abonnement éligible, le compte utilise FREE. Aucun abonnement payant ni paiement n’est créé par Auth.js, une page ou une API du MVP. La table Subscription contient au plus une ligne par utilisateur. L’accès payant exige une ligne serveur ACTIVE ou TRIALING, une période valide, un fournisseur STRIPE et une référence fournisseur. Ces champs seront alimentés exclusivement par une intégration fournisseur vérifiée à l’étape 19. Une référence seule ne constitue pas une preuve de paiement : les droits reposent sur la confiance dans la base serveur et ses futurs webhooks, jamais sur une valeur navigateur.
+Sans abonnement éligible, le compte utilise FREE. Aucun abonnement payant n’est accordé par Auth.js, une page de retour ou un simple paramètre navigateur. Les confirmations vérifiées du fournisseur sont la seule source des droits. La table Subscription contient au plus une ligne par utilisateur. L’accès exige une ligne serveur et une période valides, une référence fournisseur et des données vérifiées. Le fournisseur STRIPE reste reconnu pour compatibilité ; LEMONSQUEEZY exige le mode test et une révision de synchronisation. ACTIVE et TRIALING sont éligibles ; CANCELED Lemon Squeezy conserve les droits si cancelAtPeriodEnd est confirmé et la période non échue. Les champs Lemon Squeezy sont alimentés par les webhooks signés et les réponses API vérifiées de l’étape 19. Une référence seule ne constitue pas une preuve de paiement : les droits reposent sur la confiance dans la base serveur et ses futurs webhooks, jamais sur une valeur navigateur.
 
-PAST_DUE, CANCELED, EXPIRED, une période expirée/future ou une configuration non éligible donnent immédiatement FREE. Aucune suppression de projet, version ou événement n’accompagne une rétrogradation. Un compte au-dessus de sa nouvelle capacité conserve ses projets ; il doit en archiver avant de créer/réactiver. Une annulation en fin de période devra être représentée par ACTIVE jusqu’à l’échéance, puis CANCELED par le futur fournisseur.
+PAST_DUE, EXPIRED, une annulation sans maintien confirmé de la période, une période expirée/future ou une configuration non éligible donnent FREE. Aucune suppression de projet, version ou événement n’accompagne une rétrogradation. Un compte au-dessus de sa nouvelle capacité conserve ses projets ; il doit en archiver avant de créer/réactiver. Une annulation en fin de période devra être représentée par ACTIVE jusqu’à l’échéance, puis CANCELED par le futur fournisseur.
 
 Enterprise accepte `limitOverrides` (JSON strict validé) pour les cinq ressources : entiers de 0 à 1 000 000 ou null. Cette configuration est uniquement administrée côté serveur ; aucune route publique de modification n’existe. Une configuration invalide produit une erreur technique et ne donne pas un quota illimité.
 
-Les fonctions de collaboration, de support opérationnel et de personnalisation avancée sont annoncées comme futures. Les métadonnées du plan ne les implémentent pas. Aucun paiement Stripe ni activation fictive n’est présent.
+Les fonctions de collaboration, de support opérationnel et de personnalisation avancée sont annoncées comme futures. Les métadonnées du plan ne les implémentent pas. Aucun paiement Stripe ni activation fictive n’est présent. Lemon Squeezy est limité au mode test.
 
 ## Unités et périodes
 
@@ -56,7 +58,7 @@ FREE peut consulter les deux dernières versions de chaque type de document par 
 
 `/dashboard/settings/subscription` présente plan effectif, statut, périodes UTC, consommations, réservations, limites et quantités restantes. Les zéros sont des valeurs réelles ; les plans illimités n’affichent pas de barre de progression. Chargement et erreur ont des composants dédiés.
 
-`/pricing` affiche Free 0 €, Pro 19 €, Agency 59 €, Enterprise sur devis. Ces prix sont des hypothèses commerciales. Les boutons payants sont désactivés avec la mention de disponibilité future ; aucun checkout factice ni modification d’abonnement.
+`/pricing` affiche Free 0 €, Pro 19 €, Agency 59 €, Enterprise sur devis. Ces prix sont des hypothèses commerciales. Les boutons Pro/Agency ouvrent un checkout Lemon Squeezy en mode test si configuré ; sinon ils indiquent son indisponibilité. Le checkout seul n’active aucun abonnement.
 
 Les refus commerciaux exposent seulement code QUOTA_EXCEEDED, resource, limit, used, reserved et un lien `/pricing`. Les erreurs techniques restent distinctes. Les formulaires/générations/exports proposent une consultation des offres.
 

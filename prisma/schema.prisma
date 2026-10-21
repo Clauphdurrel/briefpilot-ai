@@ -43,6 +43,7 @@ model User {
   subscription Subscription?
   usageCounters UsageCounter[]
   usageEvents UsageEvent[]
+  billingCheckouts BillingCheckoutIntent[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -203,6 +204,7 @@ enum SubscriptionStatus {
 enum SubscriptionProvider {
   NONE
   STRIPE
+  LEMONSQUEEZY
 }
 enum UsageResource {
   AI_INTERVIEW
@@ -228,6 +230,12 @@ model Subscription {
   provider SubscriptionProvider @default(NONE)
   providerCustomerId String?
   providerSubscriptionId String? @unique
+  providerVariantId String?
+  providerRevision String?
+  providerCreatedAt DateTime?
+  providerTestMode Boolean @default(false)
+  cancelAtPeriodEnd Boolean @default(false)
+  accessEndsAt DateTime?
   limitOverrides Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -261,4 +269,28 @@ model UsageEvent {
   updatedAt DateTime @updatedAt
   @@unique([userId, resource, operationId])
   @@index([userId, status, leaseUntil])
+}
+
+model BillingCheckoutIntent {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan
+  tokenHash String
+  providerCheckoutId String? @unique
+  providerSubscriptionId String? @unique
+  url String?
+  state String @default("PENDING")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId, expiresAt])
+}
+model BillingWebhookEvent {
+  id String @id
+  eventName String
+  providerSubscriptionId String
+  outcome String
+  createdAt DateTime @default(now())
+  @@index([providerSubscriptionId, createdAt])
 }
