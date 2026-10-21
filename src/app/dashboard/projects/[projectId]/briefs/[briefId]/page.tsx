@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ExportMenu } from "@/components/brief/export-menu";
 import { BriefActions } from "@/components/brief/brief-actions";
 import { BriefInsights } from "@/components/brief/brief-insights";
 import { BriefToc } from "@/components/brief/brief-toc";
@@ -45,6 +46,7 @@ export default async function BriefDetailPage({ params }: { params: Promise<{ pr
           <Badge variant="outline">Projet : {projectStatusLabels[project.status]}</Badge>
           <time dateTime={brief.createdAt}>{new Intl.DateTimeFormat("fr", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Abidjan" }).format(new Date(brief.createdAt))}</time>
         </div>
+        <ExportMenu key={brief.id} projectId={project.id} briefId={brief.id} />
         {brief.generation.draft && <p className="text-sm text-muted-foreground">Ce brouillon contient des informations manquantes. Il doit être complété et validé avec le client.</p>}
         {brief.generation.sourceRevision !== readiness.sourceRevision && <p className="text-sm text-muted-foreground">Le projet ou l’interview a évolué depuis cette version. Tu peux régénérer le document.</p>}
       </div>

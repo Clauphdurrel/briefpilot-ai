@@ -10,9 +10,10 @@ import { projectIdSchema } from "@/server/validators/project.schema";
 
 export type ProjectRouteContext = { params: Promise<{ projectId: string }> };
 
-export async function withInterviewAccess(
+export async function withInterviewAccess<T>(
   request: Request, context: ProjectRouteContext,
-  operation: (ownerId: string, projectId: string) => Promise<unknown>,
+  operation: (ownerId: string, projectId: string) => Promise<T>,
+  responseFactory?: (data: T) => Response,
 ) {
   try {
     const session = await auth();
@@ -27,6 +28,7 @@ export async function withInterviewAccess(
       if (!origin || !allowed.includes(origin)) throw new InterviewError("INVALID_ORIGIN", 403, "Origine de la demande invalide.");
     }
     const data = await operation(user.id, projectId);
+    if (responseFactory) return responseFactory(data);
     return NextResponse.json({ data }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const known = error instanceof InterviewError ? error : error instanceof ZodError

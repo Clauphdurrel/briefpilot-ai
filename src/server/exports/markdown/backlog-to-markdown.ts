@@ -1,0 +1,17 @@
+import { storedBacklogSchema } from "@/server/validators/backlog.schema";
+import { escapeMarkdown as e, exportReferenceSchema, markdownList as list, markdownTable, referenceMarkdown, type ExportReference } from "./markdown-utils";
+
+const basis = { confirmed: "Confirmé", assumed: "Hypothèse", recommended: "Recommandation" };
+export function backlogToMarkdown(raw: unknown, reference: ExportReference, status: "DRAFT" | "READY"): string {
+  const { document: doc, generation } = storedBacklogSchema.parse(raw);
+  exportReferenceSchema.parse(reference);
+  return `# Backlog — ${e(generation.projectName)}\n\n${referenceMarkdown(reference)}\n\nCahier des charges source : version ${generation.sourceBriefVersion}\n\n${status === "DRAFT" ? "Brouillon — hypothèses et informations à confirmer." : "Backlog généré — à valider avec l’équipe."}\n\n` +
+    `## Résumé du projet\n\n${e(doc.summary.objective)}\n\nPérimètre : ${e(doc.summary.scope)}\n\n### Hypothèses techniques\n${list(doc.summary.technicalAssumptions)}\n\n### Informations manquantes\n${list(doc.summary.missingInformation)}\n\n` +
+    `## Phases\n\n${markdownTable(["Phase", "Objectif"], doc.phases.map((phase) => [phase.name, phase.objective]))}\n\n` +
+    `## Épics\n\n${doc.epics.map((epic) => `### ${e(epic.id)} — ${e(epic.title)}\n\n${e(epic.description)}\n\n${markdownTable(["Priorité", "Phase", "Classification", "Dépendances"], [[epic.priority, epic.phase, basis[epic.basis], epic.dependencies.join(", ") || "Aucune"]])}\n\nFonctionnalités sources : ${epic.sourceFeatureIds.map(e).join(", ") || "Fondation technique recommandée"}`).join("\n\n")}\n\n` +
+    `## User stories\n\n${doc.stories.map((story) => `### ${e(story.id)} — ${e(story.title)}\n\n${e(story.description)}\n\nÉpic : ${e(story.epicId)} · Rôle : ${e(story.userRole)} · Priorité : ${story.priority} · ${basis[story.basis]}\n\nValeur métier : ${e(story.businessValue)}\n\nDépendances : ${story.dependencies.map(e).join(", ") || "Aucune"}\n\nFonctionnalités sources : ${story.sourceFeatureIds.map(e).join(", ") || "Fondation technique recommandée"}\n\n#### Critères d’acceptation\n${list(story.acceptanceCriteria)}`).join("\n\n") || "Aucune story renseignée."}\n\n` +
+    `## Tâches techniques\n\nLes efforts sont indicatifs, à confirmer après examen du repository. Ils ne constituent ni un devis ni un engagement contractuel. Les fichiers suggérés sont hypothétiques.\n\n${doc.tasks.map((task) => {
+      const effort = task.estimation.estimatedEffort;
+      return `### ${e(task.id)} — ${e(task.title)}\n\n${e(task.description)}\n\n${markdownTable(["Rôle", "Priorité", "Complexité", "Effort indicatif"], [[task.role, task.priority, task.estimation.complexity, effort ? `${effort.minHours}–${effort.maxHours} h` : "À estimer"]])}\n\n${basis[task.basis]} · Épic : ${e(task.epicId)} · Story : ${task.storyId ? e(task.storyId) : "Sans story"}\n\nJustification de l’estimation : ${e(task.estimation.rationale)}\n\nDépendances : ${task.dependencies.map(e).join(", ") || "Aucune"}\n\nFonctionnalités sources : ${task.sourceFeatureIds.map(e).join(", ") || "Fondation technique recommandée"}\n\n#### Critères d’acceptation\n${list(task.acceptanceCriteria)}\n\n#### Tests attendus\n${list(task.testingRequirements)}\n\n#### Contraintes\n${list(task.constraints)}\n\n#### Risques\n${list(task.risks)}\n\n#### Fichiers suggérés à vérifier\n${list(task.suggestedFiles)}`;
+    }).join("\n\n")}\n`;
+}
