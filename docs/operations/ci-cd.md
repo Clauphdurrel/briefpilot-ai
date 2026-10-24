@@ -12,7 +12,7 @@
 | e2e | PostgreSQL temporaire, Chromium et 9 parcours sur desktop/tablette/mobile |
 | security | `pnpm audit --audit-level=high`, échec sur avis high/critical et erreurs de registre |
 
-`quality` construit une seule fois l'application. Une archive de `.next` sans cache est transférée aux jobs database/e2e du même run, conservée 1 jour. Le rapport unitaire et les captures/traces E2E en cas d'échec sont conservés 7 jours ; toutes les données sont synthétiques. Restreindre l'accès aux artifacts du dépôt privé. Les jobs n'écrivent aucun rapport dans une PR avec un jeton privilégié.
+`quality` construit une seule fois l'application. Une archive de `.next` sans cache est transférée aux jobs database/e2e du même run, conservée 1 jour. Le rapport unitaire et les captures/traces E2E en cas d'échec sont conservés 7 jours ; toutes les données sont synthétiques. Le dépôt existant est public : considérer les artifacts CI comme accessibles et conserver exclusivement des données synthétiques. Les jobs n'écrivent aucun rapport dans une PR avec un jeton privilégié.
 
 ## Versions et permissions
 
@@ -62,6 +62,10 @@ Après le premier pipeline vert, dans Settings → Rules → Rulesets, cibler s�
 ## Revue et exceptions
 
 Revue manuelle avec le skill local `review-code` contre develop. Aucun appel automatique à une API Codex/OpenAI et aucune clé additionnelle ne sont nécessaires. Pour un avis sécurité high/critical : corriger et retester ; ne pas ajouter continue-on-error. Toute exception doit être justifiée dans une PR, limitée à l'avis exact, avec responsable et date d'expiration ; aucune exception n'est actuellement configurée. Une indisponibilité du registre échoue le job et nécessite une relance après vérification.
+
+## Rollback du futur déploiement
+
+Aucun déploiement ni rollback automatique n'est activé ici. À l'étape 24, prévoir des versions d'application immuables et la restauration de la version précédente avec sa configuration compatible. Préférer des migrations PostgreSQL compatibles avec les deux versions (expand/contract) et tester sauvegarde/restauration avant production. Ne jamais utiliser migrate reset ou inverser une migration destructive pour traiter un incident sans analyse de données et procédure validée.
 
 ## Critère de fin
 

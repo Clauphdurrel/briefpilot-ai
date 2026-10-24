@@ -76,6 +76,8 @@ it("reports safe structured fields locally but performs no SDK capture in tests"
   expect(JSON.stringify(logger.logEvent.mock.calls)).not.toContain("secretpassword"); expect(JSON.stringify(logger.logEvent.mock.calls)).not.toContain("private-user");
 });
 it("does not throw if the enabled SDK fails", async () => {
+  // This SDK is mocked above: explicitly select its enabled branch regardless of CI flags.
+  vi.stubEnv("E2E_TEST", "false"); vi.stubEnv("PLAYWRIGHT_TEST", "false");
   vi.stubEnv("OBSERVABILITY_ENABLED", "true"); vi.stubEnv("SENTRY_DSN", configured.dsn); vi.stubEnv("OBSERVABILITY_ENVIRONMENT", "staging"); vi.stubEnv("NODE_ENV", "production"); vi.stubEnv("OBSERVABILITY_TEST_MODE", "false");
   sdk.captureEvent.mockImplementationOnce(() => { throw new Error("private SDK details"); });
   const { reportError } = await import("../errors");
