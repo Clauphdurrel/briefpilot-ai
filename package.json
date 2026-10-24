@@ -12,7 +12,9 @@
     "test:integration": "node scripts/test-integration.mjs",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "observability:prune": "node scripts/prune-ai-usage.mjs",
+    "observability:report": "node scripts/ai-usage-report.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

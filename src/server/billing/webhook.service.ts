@@ -1,3 +1,4 @@
+import { observed } from "@/server/observability/operations";
 import "server-only";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -13,7 +14,7 @@ const schema = z.object({ meta: z.object({ event_name: z.string().min(1).max(100
 export function verifyWebhook(raw: Buffer, signature: string | null, secret: string) {
   if (!signature || !/^[a-f0-9]{64}$/i.test(signature) || !timingSafeEqual(createHmac("sha256", secret).update(raw).digest(), Buffer.from(signature, "hex"))) throw new InterviewError("INVALID_WEBHOOK_SIGNATURE", 401, "Signature de webhook invalide.");
 }
-export async function handleLemonWebhook(raw: Buffer, signature: string | null, headerEvent?: string | null, provider: BillingProvider = new LemonSqueezyProvider()) {
+async function handleLemonWebhookCore(raw: Buffer, signature: string | null, headerEvent?: string | null, provider: BillingProvider = new LemonSqueezyProvider()) {
   const config = billingConfig(); verifyWebhook(raw, signature, config.LEMONSQUEEZY_WEBHOOK_SECRET);
   let value: unknown; try { value = JSON.parse(raw.toString("utf8")); } catch { throw new InterviewError("INVALID_WEBHOOK", 400, "Webhook invalide."); }
   const parsed = schema.safeParse(value);
@@ -31,3 +32,5 @@ export async function handleLemonWebhook(raw: Buffer, signature: string | null, 
   const custom = payload.meta.custom_data;
   return { outcome: await synchronizeSubscription(remote, { id: eventId, name, binding: custom ? { userId: custom.user_id, intentId: custom.checkout_intent_id, token: custom.checkout_token } : undefined }) };
 }
+
+export const handleLemonWebhook: typeof handleLemonWebhookCore = observed("billing", "webhook", handleLemonWebhookCore, () => ({}));

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { resources, type Resource } from "@/config/plans";
 import { InterviewError } from "@/server/ai/errors";
 import { getUserPlan } from "./subscription.service";
+import { logEvent } from "@/server/observability/logger";
 export class QuotaError extends InterviewError {
   constructor(public resource: Resource, public limit: number, public used: number, public reserved: number) {
     super("QUOTA_EXCEEDED", 429, resource === "ACTIVE_PROJECTS" ? "La limite de projets actifs est atteinte. Archive un projet ou consulte les offres." : "Le quota de cette période est atteint. Consulte les offres ou attends la prochaine remise à zéro.");
@@ -57,7 +58,14 @@ export async function startUsage(ticket: UsageTicket) {
   });
 }
 async function finish(ticket: UsageTicket, status: "COMMITTED" | "RELEASED") {
-  await prisma.$transaction(async (tx) => { await lockUsage(tx, ticket.userId); const event = await tx.usageEvent.findFirst({ where: { id: ticket.id, userId: ticket.userId } }); if (event) await settle(tx, event.id, status); });
+  const resource = await prisma.$transaction(async (tx) => {
+    await lockUsage(tx, ticket.userId);
+    const event = await tx.usageEvent.findFirst({ where: { id: ticket.id, userId: ticket.userId } });
+    if (!event || !["RESERVED", "STARTED"].includes(event.status)) return null;
+    await settle(tx, event.id, status);
+    return status === "COMMITTED" ? event.resource : null;
+  });
+  if (resource) { try { logEvent("quota_committed", { resource, status: "SUCCESS" }); } catch { /* Logging cannot change committed usage. */ } }
 }
 export const commitUsage = (ticket: UsageTicket) => finish(ticket, "COMMITTED");
 export const releaseUsage = (ticket: UsageTicket) => finish(ticket, "RELEASED");

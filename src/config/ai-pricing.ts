@@ -1,7 +1,7 @@
-// Standard text-token USD rates per million, verified 2026-10-21.
+// Standard text-token USD rates per million, verified 2026-10-24.
 // Source: https://developers.openai.com/api/docs/pricing (Standard, not Batch/Flex/Priority).
 // Never approximate an unknown model, tier, modality, or a future snapshot by prefix.
-export const AI_PRICING_VERSION = "openai-standard-text-2026-10-21.v1";
+export const AI_PRICING_VERSION = "openai-standard-text-2026-10-24.v1";
 export const AI_PRICING_SOURCE = "https://developers.openai.com/api/docs/pricing";
 const mini = { input: 0.40, cachedInput: 0.10, output: 1.60 };
 export const aiTextPricing: Readonly<Record<string, typeof mini>> = {

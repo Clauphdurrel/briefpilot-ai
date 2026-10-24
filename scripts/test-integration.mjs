@@ -22,7 +22,7 @@ try {
   await withIsolatedDatabase(async({env:databaseEnv})=>{
     const preload=fileURLToPath(new URL('./test-fetch-local.mjs',import.meta.url));
     const env={...databaseEnv,NODE_OPTIONS:`--import=${preload}`,AUTH_SECRET:'local-integration-auth-secret-no-production-value',AUTH_GOOGLE_ID:'local-integration-google',AUTH_GOOGLE_SECRET:'local-integration-google-secret',AUTH_URL:'http://localhost:3109',AUTH_TEST_URL:'http://localhost:3109',OPENAI_API_KEY:'local-integration-no-external-key',OPENAI_MODEL:'test-model',BILLING_INTEGRATION:'1',LEMON_BILLING_INTEGRATION:'1',SECURITY_INTEGRATION:'1',INTERVIEW_VISUAL_TEST:'1',BRIEF_VISUAL_TEST:'1',BACKLOG_VISUAL_TEST:'1',MARKDOWN_VISUAL_TEST:'1'};
-    await run(['node_modules/vitest/vitest.mjs','run','src/server/services/__tests__/usage.postgres.test.ts','src/server/services/__tests__/history-access.postgres.test.ts','src/server/billing/__tests__/billing.postgres.test.ts'],env);
+    await run(['node_modules/vitest/vitest.mjs','run','src/server/services/__tests__/usage.postgres.test.ts','src/server/services/__tests__/history-access.postgres.test.ts','src/server/billing/__tests__/billing.postgres.test.ts','src/server/observability/__tests__/observability.postgres.test.ts'],env);
     const server=launch(['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','3109'],env,true);
     try {
       let ready=false;

@@ -62,6 +62,12 @@ it("does not initialize or capture remotely when disabled, including the Next re
   await import("@/instrumentation-client");
   expect(sdk.init).not.toHaveBeenCalled(); expect(sdk.captureRequestError).not.toHaveBeenCalled();
 });
+it("does not let an explicit false monitoring test flag override the E2E boundary", () => {
+  vi.stubEnv("NODE_ENV", "production"); vi.stubEnv("OBSERVABILITY_ENABLED", "true");
+  vi.stubEnv("OBSERVABILITY_ENVIRONMENT", "staging"); vi.stubEnv("SENTRY_DSN", configured.dsn);
+  vi.stubEnv("OBSERVABILITY_TEST_MODE", "false"); vi.stubEnv("E2E_TEST", "true");
+  expect(sentryOptions("server").enabled).toBe(false);
+});
 it("reports safe structured fields locally but performs no SDK capture in tests", async () => {
   vi.stubEnv("OBSERVABILITY_ENABLED", "true"); vi.stubEnv("SENTRY_DSN", configured.dsn); vi.stubEnv("OBSERVABILITY_ENVIRONMENT", "staging"); vi.stubEnv("NODE_ENV", "test");
   const { reportError } = await import("../errors");

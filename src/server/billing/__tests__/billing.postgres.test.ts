@@ -8,6 +8,8 @@ import { getUserPlan } from "@/server/services/subscription.service";
 import { reserveUsage, startUsage, commitUsage, getRemainingQuota } from "@/server/services/usage.service";
 import { lemonEnv, remoteFixture } from "./fixtures";
 import type { BillingProvider, CheckoutInput } from "../provider";
+const analytics = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@/server/observability/analytics", () => ({ captureBusinessEvent: analytics }));
 const users: string[] = [], subscriptions: string[] = [];
 async function setup(plan: "PRO" | "AGENCY" = "PRO") {
   const id = randomUUID(); users.push(id); await prisma.user.create({ data: { id, email: `${id}@example.invalid` } });
@@ -22,12 +24,26 @@ async function setup(plan: "PRO" | "AGENCY" = "PRO") {
   return { id, input, provider, data, remote, event };
 }
 describe.skipIf(process.env.LEMON_BILLING_INTEGRATION !== "1")("Billing PostgreSQL", () => {
-  beforeEach(() => { for (const [key, value] of Object.entries(lemonEnv)) vi.stubEnv(key, value); });
+  beforeEach(() => { analytics.mockClear(); for (const [key, value] of Object.entries(lemonEnv)) vi.stubEnv(key, value); });
   afterEach(async () => { await prisma.billingWebhookEvent.deleteMany({ where: { providerSubscriptionId: { in: subscriptions.splice(0) } } }); await prisma.user.deleteMany({ where: { id: { in: users.splice(0) } } }); vi.unstubAllEnvs(); });
   it.each(["PRO", "AGENCY"] as const)("grants %s only after remote verification and nonce-bound synchronization", async (plan) => {
     const value = await setup(plan); expect((await getUserPlan(value.id)).plan).toBe("FREE");
     await synchronizeSubscription(value.remote(), value.event()); expect((await getUserPlan(value.id)).plan).toBe(plan);
     expect((await prisma.billingCheckoutIntent.findUniqueOrThrow({ where: { id: value.input.intentId } })).url).toBeNull();
+  });
+  it("emits one activation under concurrent synchronization and only real subsequent transitions", async () => {
+    const value = await setup(); analytics.mockClear();
+    const initial = value.remote();
+    await Promise.all([synchronizeSubscription(initial, value.event()), synchronizeSubscription(initial, value.event())]);
+    expect(analytics.mock.calls.filter((call) => (call as unknown[])[1] === "subscription_activated")).toHaveLength(1);
+    const newer = { ...initial, revision: (BigInt(initial.revision) + BigInt(1)).toString() };
+    await synchronizeSubscription(newer, value.event());
+    expect(analytics).toHaveBeenCalledTimes(1);
+    const canceled = { ...newer, revision: (BigInt(newer.revision) + BigInt(1)).toString(), cancelAtPeriodEnd: true };
+    await synchronizeSubscription(canceled, value.event());
+    expect(analytics.mock.calls.filter((call) => (call as unknown[])[1] === "subscription_canceled")).toHaveLength(1);
+    await synchronizeSubscription({ ...canceled, revision: (BigInt(canceled.revision) + BigInt(1)).toString() }, value.event());
+    expect(analytics).toHaveBeenCalledTimes(2);
   });
   it("reuses an open checkout and refuses a second plan without issuing a second remote request", async () => {
     const value = await setup(); await createBillingCheckout(value.id, "PRO", value.provider); expect(value.provider.createCheckout).toHaveBeenCalledTimes(1);

@@ -1,3 +1,5 @@
+import { captureBusinessEvent } from "@/server/observability/analytics";
+import { observed } from "@/server/observability/operations";
 import "server-only";
 import { assertProjectCapacity, lockUsage } from "./usage.service";
 import { createProjectSchema, projectIdSchema } from "@/server/validators/project.schema";
@@ -5,7 +7,7 @@ import { InterviewError } from "@/server/ai/errors";
 import { prisma } from "@/lib/prisma";
 import type { CreateProjectInput } from "@/server/validators/project.schema";
 
-export async function createOwnedProject(ownerId: string, input: CreateProjectInput) {
+async function createOwnedProjectCore(ownerId: string, input: CreateProjectInput) {
   const validated = createProjectSchema.parse(input);
   return prisma.$transaction(async (tx) => {
     await assertProjectCapacity(tx, ownerId);
@@ -45,3 +47,5 @@ export async function setProjectArchived(ownerId: string, rawProjectId: string, 
     return tx.project.update({ where: { id: projectId }, data: { status: archived ? "ARCHIVED" : project.status === "ARCHIVED" ? "DRAFT" : project.status }, select: { id: true, status: true } });
   });
 }
+
+export const createOwnedProject: typeof createOwnedProjectCore = observed("project", "create_project", createOwnedProjectCore, (ownerId) => ({ userId: ownerId }), async (result, ownerId) => { await captureBusinessEvent(ownerId, "project_created", result.id); });

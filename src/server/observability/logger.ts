@@ -1,11 +1,12 @@
 import "server-only";
 import pino, { type DestinationStream } from "pino";
 import { currentOperation } from "./context";
+import { safeErrorCode } from "@/lib/observability/sentry-options";
 const levels = ["debug", "info", "warn", "error", "fatal"] as const;
 type Level = typeof levels[number];
 const identifier = /^(?:[a-f0-9]{64}|[a-f0-9]{8}-[a-f0-9-]{27}|c[a-z0-9]{20,31})$/;
 const numericFields = new Set(["durationMs", "inputTokens", "outputTokens", "cachedInputTokens", "totalTokens", "estimatedCost", "statusCode"]);
-const labelFields = new Set(["module", "agentName", "model", "status", "usageStatus", "currency", "pricingVersion", "resource", "errorCode", "environment"]);
+const labelFields = new Set(["module", "operation", "agentName", "model", "status", "usageStatus", "currency", "pricingVersion", "resource", "errorCode", "environment"]);
 export function safeFields(fields: Record<string, unknown>): Record<string, string | number | null> {
   const result: Record<string, string | number | null> = {};
   for (const [key, value] of Object.entries(fields)) {
@@ -16,8 +17,11 @@ export function safeFields(fields: Record<string, unknown>): Record<string, stri
   return result;
 }
 export function safeError(error: unknown) {
-  const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
-  return { errorCode: typeof code === "string" && /^(?:AI|BRIEF|BACKLOG|PDF|BILLING|CHECKOUT|SUBSCRIPTION|USAGE|QUOTA|INVALID|INTERNAL|PROJECT|AUTH|UNAUTHENTICATED)[A-Z_]*$/.test(code) ? code : "INTERNAL_ERROR" };
+  try {
+    const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+    const safe = safeErrorCode(code);
+    return { errorCode: safe === "UNEXPECTED_ERROR" ? "INTERNAL_ERROR" : safe };
+  } catch { return { errorCode: "INTERNAL_ERROR" }; }
 }
 export function createStructuredLogger(destination?: DestinationStream) {
   const configured = process.env.LOG_LEVEL;

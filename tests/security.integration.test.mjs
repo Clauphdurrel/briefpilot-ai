@@ -31,6 +31,12 @@ describe('authentication and project access security', { skip: process.env.SECUR
   });
   after(async () => { if (pool) { try { await pool.query('DELETE FROM "User" WHERE id=ANY($1::text[])', [users]); } finally { await pool.end(); } } });
   const request = (path, token = valid, options = {}) => fetch(new URL(path, base), { redirect: 'manual', ...options, headers: { Cookie: cookie(token), ...options.headers } });
+  test('public health exposes only liveness without cached internals', async () => {
+    const response = await fetch(new URL('/api/health', base));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: 'ok' });
+    assert.match(response.headers.get('cache-control'), /no-store/);
+  });
   const decode = (value) => value.replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
   async function actionForm(path, field) {
     const response = await request(path); assert.equal(response.status, 200);

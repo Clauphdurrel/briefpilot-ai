@@ -142,3 +142,21 @@ test('08 · checkout test, webhook signé, annulation et reprise vérifiées', a
   expect((await status.json()).data.plan).toBe('PRO');
   await noOverflow(page);
 });
+
+
+test('09 · consentement analytics enregistré et révocable', async ({ page, account }) => {
+  await page.goto('/dashboard/settings');
+  const consent = page.getByRole('checkbox', { name: /Autoriser les statistiques/ });
+  await expect(consent).not.toBeChecked();
+  for (const allowed of [true, false]) {
+    await consent.setChecked(allowed);
+    await page.getByRole('button', { name: 'Enregistrer ma préférence' }).click();
+    await expect(page.getByRole('status')).toBeVisible();
+    const stored = await account.pool.query('SELECT "analyticsConsent" FROM "User" WHERE id=$1', [account.id]);
+    expect(stored.rows[0].analyticsConsent).toBe(allowed);
+    await page.reload();
+    if (allowed) await expect(consent).toBeChecked();
+    else await expect(consent).not.toBeChecked();
+  }
+  await noOverflow(page);
+});

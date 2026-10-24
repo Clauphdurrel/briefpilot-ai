@@ -8,6 +8,10 @@ type Fields = { module?: string; errorCode?: string; requestId?: string; operati
 export function reportError(error: unknown, fields: Fields = {}): void {
   try {
     const context = currentOperation();
+    if (error && typeof error === "object" && context?.reportedErrors) {
+      if (context.reportedErrors.has(error)) return;
+      context.reportedErrors.add(error);
+    }
     let code: unknown = fields.errorCode;
     if (!code && error && typeof error === "object" && "code" in error) code = error.code;
     const event = scrubSentryEvent({ tags: {
