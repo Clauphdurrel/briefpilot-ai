@@ -39,3 +39,11 @@ it("sanitizes API failures and disallows following redirects", async () => {
   const transport = vi.fn<typeof fetch>(async () => new Response("private-secret", { status: 500 }));
   await expect(new LemonSqueezyProvider(transport).getSubscription("500")).rejects.toMatchObject({ code: "BILLING_PROVIDER_UNAVAILABLE" }); expect(transport.mock.calls[0][1]).toMatchObject({ redirect: "error", cache: "no-store" });
 });
+it("cancels oversized provider streams before concatenation and keeps the error public", async () => {
+  const cancel = vi.fn();
+  const body = new ReadableStream<Uint8Array>({ start(c) { c.enqueue(new Uint8Array(256000)); c.enqueue(new Uint8Array(256001)); }, cancel });
+  const transport = vi.fn<typeof fetch>(async () => new Response(body));
+  await expect(new LemonSqueezyProvider(transport).getSubscription("500")).rejects.toMatchObject({ code: "BILLING_PROVIDER_UNAVAILABLE", status: 503 });
+  expect(cancel).toHaveBeenCalledOnce();
+  expect(body.locked).toBe(false);
+});

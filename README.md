@@ -11,6 +11,7 @@ nvm use
 corepack enable
 pnpm install --frozen-lockfile
 cp .env.example .env
+chmod 600 .env
 ```
 
 Renseigner `.env` localement, sans le versionner. `DATABASE_URL` doit correspondre à PostgreSQL. Pour Compose, définir `COMPOSE_POSTGRES_PASSWORD` avant `docker compose up -d postgres` ; le port est limité au loopback. Changer cette variable ne change pas le mot de passe d'un volume PostgreSQL déjà initialisé : modifier le rôle existant de façon contrôlée et mettre à jour `DATABASE_URL`. Ne pas supprimer le volume.

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, describe, test } from "node:test";
 import pg from "pg";
+import { readFileSync } from "node:fs";
+import { grantTestPlan } from "./helpers/billing-fixture.mjs";
 
 // Explicit isolated fixtures only; never load the application's .env implicitly.
 // SECURITY_INTEGRATION=1 AUTH_TEST_URL=http://localhost:PORT DATABASE_URL=... node --test tests/security.integration.test.mjs
@@ -107,5 +109,33 @@ describe('authentication and project access security', { skip: process.env.SECUR
       // Next may serialize the searchParams in its RSC payload; the alert itself must be fixed text.
       assert.match(html, /role="alert"[^>]*>La connexion n’a pas abouti\. Réessaie\.<\/p>/);
     }
+  });
+  test('premium unlimited history never bypasses another account document ownership', async () => {
+    await grantTestPlan(pool, users[0]);
+    const plan = await (await request('/api/billing/usage')).json();
+    assert.equal(plan.data.plan, 'PRO');
+    const briefId = randomUUID(), backlogId = randomUUID(), victimToken = randomUUID();
+    const document = JSON.parse(readFileSync('docs/prompts/brief-generator.example.json', 'utf8'));
+    const brief = { schemaVersion: 'brief.v1', document, generation: {
+      version: 1, requestId: randomUUID(), sourceRevision: 'a'.repeat(64), projectName: 'Security project 1',
+      projectType: 'WEBSITE', language: 'fr', draft: true, generatedAt: new Date().toISOString(), model: 'test-model',
+    } };
+    const backlog = { schemaVersion: 'backlog.v1', document: JSON.parse(readFileSync('docs/prompts/backlog-generator.example.json', 'utf8')),
+      generation: { model: 'test-model', language: 'fr', generatedAt: new Date().toISOString(), projectName: 'Security project 1', sourceBriefVersion: 1 } };
+    await pool.query('INSERT INTO "Brief" (id,"projectId",title,content,json,"updatedAt") VALUES ($1,$2,\'Private security brief\',\'Private security content\',$3,NOW())', [briefId, projects[1], brief]);
+    await pool.query('INSERT INTO "Backlog" (id,"projectId","sourceBriefId",version,status,data,"sourceRevision","updatedAt") VALUES ($1,$2,$3,1,\'DRAFT\',$4,$5,NOW())', [backlogId, projects[1], briefId, backlog, 'a'.repeat(64)]);
+    await pool.query('INSERT INTO "Session" (id,"sessionToken","userId",expires) VALUES ($1,$2,$3,NOW()+INTERVAL \'1 hour\')', [randomUUID(), victimToken, users[1]]);
+    const prefix = `/api/projects/${projects[1]}`;
+    for (const path of [`${prefix}/briefs/${briefId}`, `${prefix}/backlogs/${backlogId}`]) {
+      const ownerResponse = await request(path, victimToken);
+      assert.equal(ownerResponse.status, 200, await ownerResponse.text());
+    }
+    for (const suffix of [`briefs/${briefId}`, `backlogs/${backlogId}`, `exports/brief/${briefId}`, `exports/backlog/${backlogId}`, `exports/pdf/brief/${briefId}`, `exports/pdf/backlog/${backlogId}`, `exports/pdf/project?briefId=${briefId}&backlogId=${backlogId}`]) {
+      const response = await request(`${prefix}/${suffix}`);
+      assert.equal(response.status, 404, suffix);
+      assert.doesNotMatch(await response.text(), /Private security|Security project 1/);
+    }
+    const usage = await pool.query('SELECT COUNT(*)::int AS n FROM "UsageEvent" WHERE "userId"=$1', [users[0]]);
+    assert.equal(usage.rows[0].n, 0);
   });
 });

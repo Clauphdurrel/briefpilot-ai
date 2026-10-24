@@ -8,6 +8,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { InterviewError } from "@/server/ai/errors";
 import { projectIdSchema } from "@/server/validators/project.schema";
+import { BodyReadError, readBodyBytes } from "./read-body";
 
 export type ProjectRouteContext = { params: Promise<{ projectId: string }> };
 
@@ -44,25 +45,21 @@ export async function withInterviewAccess<T>(
 export { withInterviewAccess as withProjectAccess, readInterviewBody as readJsonBody };
 
 export async function readInterviewBody(request: Request): Promise<unknown> {
-  if (!request.headers.get("content-type")?.startsWith("application/json")) {
+  if (request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") {
     throw new InterviewError("INVALID_CONTENT_TYPE", 415, "Un corps JSON est requis.");
   }
-  const reader = request.body?.getReader();
-  if (!reader) throw new InterviewError("INVALID_INPUT", 400, "Données manquantes.");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
+  if (!request.body) throw new InterviewError("INVALID_INPUT", 400, "Données manquantes.");
+  let bytes: Buffer;
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 20000) {
-        await reader.cancel();
-        throw new InterviewError("BODY_TOO_LARGE", 413, "La demande est trop volumineuse.");
-      }
-      chunks.push(value);
+    bytes = await readBodyBytes(request.body, 20000);
+  } catch (error) {
+    if (error instanceof BodyReadError) {
+      throw error.reason === "size"
+        ? new InterviewError("BODY_TOO_LARGE", 413, "La demande est trop volumineuse.")
+        : new InterviewError("BODY_TIMEOUT", 408, "La lecture de la demande a expiré. Réessaie.");
     }
-  } finally { reader.releaseLock(); }
-  try { return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown; }
+    throw error;
+  }
+  try { return JSON.parse(bytes.toString("utf8")) as unknown; }
   catch { throw new InterviewError("INVALID_JSON", 400, "Le format de la demande est invalide."); }
 }

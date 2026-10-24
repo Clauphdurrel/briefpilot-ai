@@ -35,3 +35,10 @@ Un webhook qui échoue doit pouvoir être renvoyé depuis la boutique après ré
 ## Données envoyées à l'IA
 
 Limiter les informations client à celles nécessaires au brief. Ne pas saisir de clés, mots de passe, données de carte ou données personnelles inutiles dans les descriptions/interviews ; les passages sélectionnés sont transmis au fournisseur IA. `store: false`, les filtres d'export et l'absence de contenu dans les logs ne constituent pas une détection exhaustive des secrets ni une garantie d'anonymisation du texte saisi. Vérifier les conditions de traitement et de conservation du fournisseur pour le compte utilisé avant ouverture aux clients.
+
+## Protections de l'étape 21
+
+- Créer les fichiers d'environnement avec `umask 077` ou appliquer `chmod 600 .env` après copie. Vérifier le propriétaire du compte de service et les permissions dans chaque environnement. Les fichiers `.env.*` sont ignorés par Git, sauf `.env.example` ; cela ne remplace pas un scan d'historique ni la révocation d'un secret déjà publié.
+- Auth.js utilise un logger complet à codes fixes : aucune cause, stack, adresse, session, argument adaptateur ou métadonnée OAuth n'est transmis. Les erreurs Auth.js des Server Actions reviennent vers des messages de connexion fixes. Ne pas rétablir le logger brut pour diagnostiquer un incident ; utiliser les codes autorisés et la reproduction locale avec données fictives.
+- Les corps JSON privés sont limités à 20 000 octets, les webhooks à 256 000 et les réponses Lemon Squeezy à 512 000. La limite s'applique au flux avant concaténation, sans confiance dans `Content-Length`. Un flux non terminé est annulé après dix secondes ; les erreurs publiques restent assainies. Le webhook conserve ses octets exacts pour la vérification HMAC.
+- Ces limites commencent lorsque le handler lit le corps. Elles ne remplacent pas les délais d'en-tête, limites de connexions, taille des Server Actions, protection des endpoints Auth.js et rate limiting partagé du proxy/hébergeur. Vérifier ces paramètres sur la cible de déploiement, y compris en présence de plusieurs instances.

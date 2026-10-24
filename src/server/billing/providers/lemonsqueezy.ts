@@ -4,6 +4,7 @@ import { plans } from "@/config/plans";
 import { InterviewError } from "@/server/ai/errors";
 import { billingConfig, safeLemonUrl } from "../config";
 import type { BillingProvider, CheckoutInput, RemoteSubscription } from "../provider";
+import { readBodyBytes } from "@/server/http/read-body";
 const providerId = z.union([z.string().regex(/^[1-9]\d{0,17}$/), z.number().int().positive().safe()]).transform(String);
 const date = z.iso.datetime();
 const subscriptionSchema = z.object({ data: z.object({ type: z.literal("subscriptions"), id: providerId, attributes: z.object({
@@ -49,8 +50,9 @@ export class LemonSqueezyProvider implements BillingProvider {
     try {
       const response = await this.transport(`https://api.lemonsqueezy.com/v1/${path}`, { method, headers: { Accept: "application/vnd.api+json", "Content-Type": "application/vnd.api+json", Authorization: `Bearer ${config.LEMONSQUEEZY_API_KEY}` }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(10000), redirect: "error", cache: "no-store" });
       if (!response.ok) throw new Error("Provider unavailable");
-      const text = await response.text(); if (Buffer.byteLength(text) > 512000) throw new Error("Oversized provider response");
-      return JSON.parse(text) as unknown;
+      if (!response.body) throw new Error("Empty provider response");
+      const bytes = await readBodyBytes(response.body, 512000);
+      return JSON.parse(bytes.toString("utf8")) as unknown;
     } catch { throw new InterviewError("BILLING_PROVIDER_UNAVAILABLE", 503, "Le prestataire de paiement est momentanément indisponible. Réessaie."); }
   }
   async createCheckout(input: CheckoutInput) {

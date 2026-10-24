@@ -75,6 +75,12 @@ it("validates start input and supplies the language default", async () => {
   expect(advanceInterview).toHaveBeenCalledWith("owner", "project-1", { requestId, language: "fr" }, "start");
   expect((await POST(request({ requestId, ownerId: "intruder" }), context)).status).toBe(400);
 });
+it.each(["application/jsonp", "application/json-invalid"])("rejects misleading JSON types before any AI service call: %s", async (type) => {
+  const req = request(); req.headers.set("Content-Type", type);
+  expect((await POST(req, context)).status).toBe(415);
+  expect(advanceInterview).not.toHaveBeenCalled();
+  expect(req.bodyUsed).toBe(false);
+});
 
 it("validates replies, rejects empty and oversized content, and requires a prior message", async () => {
   for (const body of [
