@@ -36,6 +36,7 @@ model User {
   email     String   @unique
   emailVerified DateTime?
   image         String?
+  analyticsConsent Boolean @default(false)
 
   accounts Account[]
   sessions Session[]
@@ -44,6 +45,7 @@ model User {
   usageCounters UsageCounter[]
   usageEvents UsageEvent[]
   billingCheckouts BillingCheckoutIntent[]
+  aiUsageLogs AIUsageLog[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -102,6 +104,7 @@ model Project {
   briefs     Brief[]
   backlogs   Backlog[]
   backlogGenerations BacklogGeneration[]
+  aiUsageLogs AIUsageLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,4 +296,34 @@ model BillingWebhookEvent {
   outcome String
   createdAt DateTime @default(now())
   @@index([providerSubscriptionId, createdAt])
+}
+
+// Technical telemetry only: no prompt, response, error message, email or credential.
+model AIUsageLog {
+  id String @id @default(cuid())
+  attemptId String @unique
+  requestId String?
+  operationId String?
+  userId String?
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  projectId String?
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  agent String
+  model String
+  durationMs Int
+  inputTokens Int?
+  cachedInputTokens Int?
+  outputTokens Int?
+  totalTokens Int?
+  estimatedCost Decimal? @db.Decimal(20, 12)
+  currency String @default("USD")
+  pricingVersion String?
+  status String
+  errorCode String?
+  usageStatus String
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([operationId])
 }

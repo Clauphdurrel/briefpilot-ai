@@ -1,6 +1,6 @@
 import "server-only";
 import { historyLimit, assertHistoryAccess } from "./history-access.service";
-import { reserveUsage } from "./usage.service";
+import { lockUsage, reserveUsage } from "./usage.service";
 import { runMetered } from "@/server/ai/usage-context";
 
 import { createHash } from "node:crypto";
@@ -151,6 +151,15 @@ export async function generateBrief(ownerId: string, rawProjectId: string, raw: 
     const now = new Date();
     const latestDocument = storedBriefSchema.safeParse(latest?.json);
     if (latest && latestDocument.success && latestDocument.data.generation.sourceRevision === snapshot.sourceRevision) {
+      // Replays keep their durable identity; new aliases are bounded independently of AI quota.
+      if (!previous) {
+        await lockUsage(tx, ownerId);
+        const aliases = await tx.interviewMessage.count({ where: {
+          role: "system", project: { ownerId }, createdAt: { gte: new Date(now.getTime() - 86400000) },
+          metadata: { path: ["kind"], equals: "brief_reuse" },
+        } });
+        if (aliases >= 100) throw new InterviewError("REUSE_RATE_LIMIT", 429, "Trop de nouvelles demandes de réutilisation. Réutilise la demande précédente ou réessaie plus tard.");
+      }
       const reused = { kind: previous?.kind ?? "brief_reuse", requestId: request.requestId, hash: payloadHash, sourceRevision: snapshot.sourceRevision,
         status: "completed", attempts: previous?.attempts ?? 0, leaseUntil: now.toISOString(), briefId: latest.id };
       await tx.interviewMessage.upsert({ where: { id: ledgerId }, create: { id: ledgerId, projectId, role: "system", content: "", metadata: json(reused), createdAt: now }, update: { metadata: json(reused) } });

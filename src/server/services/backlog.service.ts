@@ -1,6 +1,6 @@
 import "server-only";
 import { historyLimit, assertHistoryAccess } from "./history-access.service";
-import { reserveUsage } from "./usage.service";
+import { lockUsage, reserveUsage } from "./usage.service";
 import { runMetered } from "@/server/ai/usage-context";
 
 import { createHash } from "node:crypto";
@@ -72,7 +72,7 @@ export async function generateBacklog(ownerId: string, rawProjectId: string, raw
   const claim = await prisma.$transaction(async (tx) => {
     await lock(tx, ownerId);
     const context = await snapshot(tx, ownerId, projectId, request.sourceBriefId, request.language);
-    await assertHistoryAccess(ownerId, projectId, "brief", request.sourceBriefId);
+    await assertHistoryAccess(ownerId, projectId, "brief", request.sourceBriefId, tx);
     const previous = await tx.backlogGeneration.findUnique({ where: key });
     if (previous && previous.payloadHash !== payloadHash) throw new InterviewError("IDEMPOTENCY_CONFLICT", 409, "Cette demande a déjà été utilisée avec un autre contenu.");
     if (previous?.state === "completed" && previous.backlogId) return { kind: "cached" as const, backlogId: previous.backlogId };
@@ -81,6 +81,14 @@ export async function generateBacklog(ownerId: string, rawProjectId: string, raw
     if (!request.regenerate) {
       const existing = await tx.backlog.findFirst({ where: { projectId, sourceBriefId: request.sourceBriefId, sourceRevision: context.revision }, orderBy: { version: "desc" }, select: { id: true } });
       if (existing) {
+        // Same-key retries remain free; distinct cache aliases cannot grow storage without bounds.
+        if (!previous) {
+          await lockUsage(tx, ownerId);
+          const aliases = await tx.backlogGeneration.count({ where: {
+            project: { ownerId }, createdAt: { gte: new Date(now.getTime() - 86400000) }, chargedAt: { isEmpty: true },
+          } });
+          if (aliases >= 100) throw new InterviewError("REUSE_RATE_LIMIT", 429, "Trop de nouvelles demandes de réutilisation. Réutilise la demande précédente ou réessaie plus tard.");
+        }
         await tx.backlogGeneration.upsert({ where: key,
           create: { projectId, requestId: request.requestId, payloadHash, sourceRevision: context.revision, state: "completed", backlogId: existing.id },
           update: { state: "completed", backlogId: existing.id, sourceRevision: context.revision, leaseUntil: null } });

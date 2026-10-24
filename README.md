@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BriefPilot AI
 
-## Getting Started
+SaaS Next.js pour transformer une demande client en interview structurée, cahier des charges, backlog et prompts Codex. Exports Markdown/PDF, authentification Google, plans et quotas ; paiements Lemon Squeezy en mode test uniquement.
 
-First, run the development server:
+## Installation locale
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Prérequis : Node.js **24.18.0** (`.nvmrc`), pnpm **11.9.0**, PostgreSQL 16 et un compte système non root pour Chromium avec sa sandbox active.
+
+```sh
+nvm use
+corepack enable
+pnpm install --frozen-lockfile
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Renseigner `.env` localement, sans le versionner. `DATABASE_URL` doit correspondre à PostgreSQL. Pour Compose, définir `COMPOSE_POSTGRES_PASSWORD` avant `docker compose up -d postgres` ; le port est limité au loopback. Changer cette variable ne change pas le mot de passe d'un volume PostgreSQL déjà initialisé : modifier le rôle existant de façon contrôlée et mettre à jour `DATABASE_URL`. Ne pas supprimer le volume.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+docker compose up -d postgres
+pnpm db:generate
+pnpm db:deploy
+pnpm exec playwright install chromium
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Configurer le client OAuth Google avec `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SECRET`, `AUTH_URL` et l'URI de retour `/api/auth/callback/google` sur l'origine choisie. Définir `OPENAI_API_KEY` et un `OPENAI_MODEL` prenant en charge Structured Outputs. Les clés restent côté serveur.
 
-## Learn More
+Le paiement attend les variables `LEMONSQUEEZY_*` et la configuration de la boutique : voir [le guide billing](docs/architecture/lemon-squeezy-billing.md). Aucun paiement réel n'est activé par cette intégration.
 
-To learn more about Next.js, take a look at the following resources:
+## Validation avant livraison
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```sh
+pnpm prisma validate
+pnpm lint
+pnpm build
+pnpm test:unit
+pnpm test:integration
+pnpm test:e2e
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Construire l'application avant les intégrations/E2E. Ces deux campagnes créent chacune une nouvelle base locale jetable, appliquent les migrations puis suppriment uniquement cette base. Le rôle PostgreSQL doit avoir le droit de créer une base. Ne pas exécuter les campagnes ou un build simultanément. Les services OpenAI et Lemon Squeezy sont simulés ; aucun achat ou appel IA externe n'est effectué. Voir [les instructions E2E](docs/audits/e2e.md), [la matrice de validation](docs/audits/test-matrix.md) et [l'audit de préproduction](docs/audits/preproduction-audit.md).
 
-## Deploy on Vercel
+## Exploitation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Voir [le runbook](docs/operations/runbook.md) pour le runtime PDF, les migrations, la sauvegarde/restauration et les vérifications de déploiement. La CI distante, le choix d'hébergement et la configuration de production appartiennent aux étapes suivantes.

@@ -25,6 +25,6 @@ export async function getUserPlan(userId: string, db: Prisma.TransactionClient =
   }
   return { plan, limits, features: { ...plans[plan].features }, period: eligible ? { start: subscription.currentPeriodStart, end: subscription.currentPeriodEnd } : calendarPeriod(now), status: subscription?.status ?? "ACTIVE", subscription };
 }
-export async function getPlanLimits(userId: string): Promise<Limits> { return (await getUserPlan(userId)).limits; }
-export async function getPlanFeatures(userId: string): Promise<Features> { return (await getUserPlan(userId)).features; }
+export async function getPlanLimits(userId: string, db: Prisma.TransactionClient = prisma): Promise<Limits> { return (await getUserPlan(userId, db)).limits; }
+export async function getPlanFeatures(userId: string, db: Prisma.TransactionClient = prisma): Promise<Features> { return (await getUserPlan(userId, db)).features; }
 export async function canAccessFeature(userId: string, feature: "markdown" | "codexPrompts" | "pdf") { return (await getPlanFeatures(userId))[feature]; }

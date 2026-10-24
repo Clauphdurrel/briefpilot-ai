@@ -10,7 +10,7 @@ export async function createOwnedProject(ownerId: string, input: CreateProjectIn
   return prisma.$transaction(async (tx) => {
     await assertProjectCapacity(tx, ownerId);
     return tx.project.create({
-    data: { ...validated, description: input.description || null, ownerId },
+    data: { ...validated, description: validated.description || null, ownerId },
     select: { id: true },
     });
   });

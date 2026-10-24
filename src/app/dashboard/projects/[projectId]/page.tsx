@@ -21,8 +21,8 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-        <div className="w-full min-w-0 sm:w-auto sm:flex-1">
+      <div className="flex flex-col items-start gap-4">
+        <div className="w-full min-w-0">
           <Link href="/dashboard/projects" className="text-sm text-muted-foreground hover:text-foreground">
             ← Retour aux projets
           </Link>
@@ -32,7 +32,7 @@ export default async function ProjectDetailPage({
             <Badge variant="secondary">{projectStatusLabels[project.status]}</Badge>
           </div>
         </div>
-        <div className="w-full space-y-2 sm:w-auto sm:shrink-0">
+        <div className="flex w-full min-w-0 flex-wrap gap-2">
           <Button asChild><Link href={`/dashboard/projects/${project.id}/interview`}>Lancer l’interview IA</Link></Button>
           <Button asChild variant="outline"><Link href={`/dashboard/projects/${project.id}/briefs`}>Cahiers des charges</Link></Button>
           <Button asChild variant="outline"><Link href={`/dashboard/projects/${project.id}/backlogs`}>Backlogs de développement</Link></Button>

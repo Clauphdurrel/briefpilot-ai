@@ -25,6 +25,7 @@ function database() {
       updateMany: vi.fn(async () => { if (["DRAFT", "INTERVIEW", "BRIEF_GENERATED"].includes(project.status)) project.status = "BRIEF_GENERATED"; return { count: 1 }; }),
     },
     interviewMessage: {
+      count: vi.fn(async () => messages.filter((row) => (row.metadata as { kind?: string })?.kind === "brief_reuse" && row.createdAt.getTime() >= Date.now() - 86400000).length),
       findMany: vi.fn(async ({ where }: { where: { role: string | { in: string[] }; metadata?: { equals: string } } }) =>
         [...messages].filter((row) => typeof where.role === "string" ? row.role === where.role && (!where.metadata || (row.metadata as { kind?: string })?.kind === where.metadata.equals) : where.role.in.includes(row.role)).sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime())),
       findUnique: vi.fn(async ({ where }: { where: { id: string } }) => messages.find((item) => item.id === where.id) ?? null),
@@ -171,6 +172,23 @@ it("loads reader version headers without loading other documents", async () => {
   expect((mocks.client.brief as { findMany: ReturnType<typeof vi.fn> }).findMany).not.toHaveBeenCalled();
 });
 
-vi.mock("@/server/services/usage.service", () => ({ reserveUsage: vi.fn(async () => ({ id: "quota-ticket", userId: "owner" })) }));
+vi.mock("@/server/services/usage.service", () => ({ reserveUsage: vi.fn(async () => ({ id: "quota-ticket", userId: "owner" })), lockUsage: vi.fn(async () => {}) }));
 vi.mock("@/server/ai/usage-context", () => ({ runMetered: (_ticket: unknown, action: () => Promise<unknown>) => action() }));
 vi.mock("@/server/services/history-access.service", () => ({ historyLimit: async () => 50, assertHistoryAccess: async () => {} }));
+
+it("bounds new cached aliases while preserving existing request replays and the next window", async () => {
+  const firstId = randomUUID(), first = await generate(firstId);
+  const alias = randomUUID(); await generate(alias);
+  for (let index = 1; index < 99; index++) await generate();
+  const concurrent = await Promise.allSettled([generate(), generate()]);
+  expect(concurrent.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+  expect(concurrent.filter((result) => result.status === "rejected")).toHaveLength(1);
+  const count = messages.length;
+  await expect(generate()).rejects.toMatchObject({ code: "REUSE_RATE_LIMIT", status: 429 });
+  expect(messages).toHaveLength(count);
+  expect((await generate(alias)).briefId).toBe(first.briefId);
+  expect((await generate(firstId)).briefId).toBe(first.briefId);
+  expect(messages).toHaveLength(count); expect(runBriefGeneratorAgent).toHaveBeenCalledOnce();
+  vi.setSystemTime(Date.now() + 86400001);
+  expect((await generate()).briefId).toBe(first.briefId);
+});

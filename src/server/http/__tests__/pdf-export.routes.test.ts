@@ -47,3 +47,27 @@ it("accepts a controlled PDF operation key and refuses malformed keys", async ()
   await brief(req, context); expect(generateBriefPdf).toHaveBeenCalledWith("owner", "project-1", "brief-old", operationId);
   expect((await brief(new Request("http://localhost/pdf", { headers: { "Idempotency-Key": "not-valid" } }), context)).status).toBe(400);
 });
+
+it.each([brief, backlog, project])("rejects cross-site and sibling-site PDF requests before rendering", async (operation) => {
+  for (const site of ["cross-site", "same-site"]) {
+    const req = request("?briefId=brief-old");
+    // Direct document routes do not accept query fields.
+    const protectedRequest = new Request(operation === project ? req : request(), {
+      headers: { "Sec-Fetch-Site": site, "Sec-Fetch-Mode": "navigate" },
+    });
+    expect((await operation(protectedRequest, context)).status).toBe(403);
+  }
+  expect(generateBriefPdf).not.toHaveBeenCalled(); expect(generateBacklogPdf).not.toHaveBeenCalled(); expect(generateProjectPdf).not.toHaveBeenCalled();
+});
+
+it("rejects a foreign or opaque Origin even without Fetch Metadata", async () => {
+  for (const origin of ["https://attacker.invalid", "null"]) {
+    expect((await brief(new Request(request(), { headers: { Origin: origin } }), context)).status).toBe(403);
+  }
+  expect(generateBriefPdf).not.toHaveBeenCalled();
+});
+
+it.each(["same-origin", "none"])("preserves intentional %s browser downloads", async (site) => {
+  const response = await brief(new Request(request(), { headers: { "Sec-Fetch-Site": site, Origin: "http://localhost", "Idempotency-Key": "00000000-0000-4000-8000-000000000001" } }), context);
+  expect(response.status).toBe(200); expect(generateBriefPdf).toHaveBeenCalledOnce();
+});

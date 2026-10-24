@@ -8,7 +8,7 @@ import { generateBacklog, getBacklogById, getProjectBacklogs, getLatestBacklog }
 const mocks = vi.hoisted(() => ({ client: {} as Record<string, unknown> }));
 vi.mock("@/lib/prisma", () => ({ prisma: mocks.client }));
 vi.mock("@/server/agents/backlog-generator.agent", async (original) => ({ ...await original<typeof import("@/server/agents/backlog-generator.agent")>(), runBacklogGeneratorAgent: vi.fn() }));
-type Ledger = { id: string; projectId: string; requestId: string; payloadHash: string; sourceRevision: string; state: string; chargedAt: Date[]; leaseUntil: Date | null; backlogId: string | null; lastAttemptAt: Date | null };
+type Ledger = { id: string; projectId: string; requestId: string; payloadHash: string; sourceRevision: string; state: string; chargedAt: Date[]; leaseUntil: Date | null; backlogId: string | null; lastAttemptAt: Date | null; createdAt: Date };
 type Row = { id: string; projectId: string; sourceBriefId: string; version: number; status: "DRAFT" | "READY"; data: object; sourceRevision: string; createdAt: Date };
 let ledgers: Ledger[], rows: Row[], source: object;
 let project: { id: string; name: string; type: string; description: string };
@@ -19,12 +19,13 @@ function database() {
     project: { findFirst: vi.fn(async ({ where }: { where: { id: string; ownerId: string } }) => where.id === project.id && where.ownerId === "owner" ? project : null) },
     brief: { findFirst: vi.fn(async ({ where }: { where: { id: string; projectId: string } }) => where.id === "brief-1" && where.projectId === project.id ? { json: source } : null) },
     backlogGeneration: {
+      count: vi.fn(async () => ledgers.filter((row) => row.chargedAt.length === 0 && row.createdAt.getTime() >= Date.now() - 86400000).length),
       findUnique: vi.fn(async ({ where }: { where: { projectId_requestId: { projectId: string; requestId: string } } }) => ledgers.find((row) => row.projectId === where.projectId_requestId.projectId && row.requestId === where.projectId_requestId.requestId) ?? null),
       findMany: vi.fn(async () => ledgers.filter((row) => row.lastAttemptAt && row.lastAttemptAt.getTime() >= Date.now() - 86400000)),
       upsert: vi.fn(async ({ where, create, update }: { where: { projectId_requestId: { requestId: string } }; create: Partial<Ledger>; update: Partial<Ledger> }) => {
         const row = ledgers.find((item) => item.requestId === where.projectId_requestId.requestId);
         if (row) { Object.assign(row, update); return row; }
-        const saved = { chargedAt: [], lastAttemptAt: null, leaseUntil: null, backlogId: null, ...create, id: randomUUID() } as Ledger;
+        const saved = { createdAt: new Date(), chargedAt: [], lastAttemptAt: null, leaseUntil: null, backlogId: null, ...create, id: randomUUID() } as Ledger;
         ledgers.push(saved); return saved;
       }),
       update: vi.fn(async ({ where, data }: { where: { id: string }; data: Partial<Ledger> }) => { const row = ledgers.find((item) => item.id === where.id)!; Object.assign(row, data); return row; }),
@@ -130,6 +131,20 @@ it("does not expose backlog identifiers from another project", async () => {
   await expect(getBacklogById("owner", project.id, "foreign-id")).rejects.toMatchObject({ code: "BACKLOG_NOT_FOUND" });
 });
 
-vi.mock("@/server/services/usage.service", () => ({ reserveUsage: vi.fn(async () => ({ id: "quota-ticket", userId: "owner" })) }));
+vi.mock("@/server/services/usage.service", () => ({ reserveUsage: vi.fn(async () => ({ id: "quota-ticket", userId: "owner" })), lockUsage: vi.fn(async () => {}) }));
 vi.mock("@/server/ai/usage-context", () => ({ runMetered: (_ticket: unknown, action: () => Promise<unknown>) => action() }));
 vi.mock("@/server/services/history-access.service", () => ({ historyLimit: async () => 50, assertHistoryAccess: async () => {} }));
+
+it("bounds new cached aliases without blocking same-key replays and resets the alias window", async () => {
+  const original = request(), first = await generate(original), alias = request(); await generate(alias);
+  for (let index = 1; index < 99; index++) await generate();
+  const concurrent = await Promise.allSettled([generate(), generate()]);
+  expect(concurrent.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+  expect(concurrent.filter((result) => result.status === "rejected")).toHaveLength(1);
+  await expect(generate()).rejects.toMatchObject({ code: "REUSE_RATE_LIMIT", status: 429 });
+  expect(ledgers).toHaveLength(101);
+  expect((await generate(original)).backlogId).toBe(first.backlogId);
+  expect((await generate(alias)).backlogId).toBe(first.backlogId);
+  expect(ledgers).toHaveLength(101); expect(runBacklogGeneratorAgent).toHaveBeenCalledOnce();
+  tick(86400001); expect((await generate()).backlogId).toBe(first.backlogId);
+});

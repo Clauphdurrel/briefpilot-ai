@@ -83,6 +83,23 @@ test('PDF API rejects anonymous, foreign, cross-project and missing access',asyn
   assert.equal((await dossier(briefs[0],backlogs[0],null)).status,401);
   assert.equal((await dossier(briefs[0],backlogs[0],tokens[1])).status,404);
 });
+test('hostile PDF navigations are refused before reserving any quota',async()=>{
+  const usage = async () => (await pool.query('SELECT COUNT(*)::int AS n FROM "UsageEvent" WHERE "userId"=$1 AND resource=\'PDF_EXPORT\'', [owners[0]])).rows[0].n;
+  const before = await usage();
+  const paths = [
+    `/api/projects/${projects[0]}/exports/pdf/brief/${briefs[0]}`,
+    `/api/projects/${projects[0]}/exports/pdf/backlog/${backlogs[0]}`,
+    `/api/projects/${projects[0]}/exports/pdf/project?briefId=${briefs[0]}&backlogId=${backlogs[0]}`,
+  ];
+  for (const path of paths) {
+    for (const headers of [{ 'Sec-Fetch-Site': 'cross-site' }, { 'Sec-Fetch-Site': 'same-site' }, { Origin: 'https://attacker.invalid' }]) {
+      const response = await fetch(base + path, { headers: { Cookie: `authjs.session-token=${tokens[0]}`, ...headers } });
+      assert.equal(response.status, 403);
+      assert.equal((await response.json()).error.code, 'INVALID_ORIGIN');
+    }
+  }
+  assert.equal(await usage(), before);
+});
 test('real old-version brief PDF has A4 pages, accents, cover, linked contents and pagination',async()=>{
   const response=await download('brief',briefs[0]);assert.equal(response.status,200,await response.clone().text());
   assert.equal(response.headers.get('content-type'),'application/pdf');assert.equal(response.headers.get('cache-control'),'private, no-store');

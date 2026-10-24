@@ -40,7 +40,7 @@ describe.skipIf(process.env.LEMON_BILLING_INTEGRATION !== "1")("Billing PostgreS
     expect(result.filter((row) => row.status === "fulfilled").length).toBeGreaterThan(0); expect(provider.createCheckout).toHaveBeenCalledTimes(1); expect(await prisma.billingCheckoutIntent.count({ where: { userId: id } })).toBe(1);
   });
   it.each(["missing", "token", "user"])("refuses an invalid initial account binding: %s", async (mode) => {
-    const value = await setup(), event = value.event(); if (mode === "missing") delete (event as { binding?: unknown }).binding; if (mode === "token") event.binding.token = "f".repeat(64); if (mode === "user") event.binding.userId = "someone-else";
+    const value = await setup(), event = value.event(); if (mode === "missing") delete (event as { binding?: unknown }).binding; if (mode === "token") event.binding.token = "f".repeat(64); if (mode === "user") event.binding.userId = randomUUID();
     await expect(synchronizeSubscription(value.remote(), event)).rejects.toThrow(); expect((await getUserPlan(value.id)).plan).toBe("FREE");
   });
   it("deduplicates a webhook concurrently without multiple active subscriptions", async () => {

@@ -5,10 +5,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: briefpilot
-      POSTGRES_PASSWORD: briefpilot
+      POSTGRES_PASSWORD: ${COMPOSE_POSTGRES_PASSWORD:?Set COMPOSE_POSTGRES_PASSWORD before starting PostgreSQL}
       POSTGRES_DB: briefpilot_ai
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - briefpilot_postgres_data:/var/lib/postgresql/data
 
