@@ -28,7 +28,7 @@ Chaque job DB a son propre service PostgreSQL. Les harnesses `test-database.mjs`
 
 Les fournisseurs OpenAI/Lemon Squeezy sont simulés localement ; les sessions utilisateurs sont créées en base de test, sans compte Google réel et sans bypass d'authentification dans l'application. Sentry/PostHog restent désactivés et les modes de test empêchent les envois distants. Le monitoring IA est activé uniquement par certains tests sur leurs propres fixtures.
 
-Chromium s'installe via `pnpm exec playwright install --with-deps chromium`. Les helpers navigateur utilisent le navigateur fourni par Playwright. Les tests PDF conservent `chromiumSandbox: true` et doivent tourner sans root. Ne pas désactiver la sandbox PDF pour contourner un runner incompatible ; corriger son environnement. Les anciens helpers CDP de test utilisent leur contexte de test éphémère avec `--no-sandbox` ; ils ne sont jamais utilisés par le renderer PDF de l'application.
+Le job database installe aussi `poppler-utils` (outils `pdftotext` et `pdfinfo`) pour contrôler le contenu et les pages des PDF générés. Sur une machine Ubuntu locale, installer ce paquet avant `pnpm test:integration`. Chromium s'installe via `pnpm exec playwright install --with-deps chromium`. Les helpers navigateur utilisent le navigateur fourni par Playwright. Les tests PDF conservent `chromiumSandbox: true` et doivent tourner sans root. Ne pas désactiver la sandbox PDF pour contourner un runner incompatible ; corriger son environnement. Les anciens helpers CDP de test utilisent leur contexte de test éphémère avec `--no-sandbox` ; ils ne sont jamais utilisés par le renderer PDF de l'application.
 
 ## Validation locale
 
@@ -57,7 +57,7 @@ Conserver `origin` existant : `Clauphdurrel/briefpilot-ai`. Ne pas pousser les n
 
 La branche `main` distante existante n'est ni réinitialisée ni fusionnée automatiquement. `develop` peut être initialisée depuis la base validée de l'étape 21 (3b20cb5) ; publier `feature/observability` puis `chore/github-ci`, créer les PR vers develop et les intégrer dans cet ordre après revue. La seconde branche inclut l'étape 22 ; sa PR restera cumulative jusqu'à intégration de la première. Ne pas forcer de push.
 
-Après le premier pipeline vert, dans Settings → Rules → Rulesets, cibler séparément main/develop : PR obligatoire, contrôles `quality`, `unit`, `database`, `e2e`, `security` obligatoires, pas de suppression ni force push. Exiger un reviewer seulement si un second reviewer est disponible. Adapter aux possibilités du plan GitHub et tester le blocage d'une PR avec contrôle échoué. Aucune protection distante ne doit être annoncée active sans lecture de sa configuration.
+Après validation du premier pipeline et intégration des PR observabilité puis CI, dans Settings → Rules → Rulesets, cibler séparément main/develop : PR obligatoire, contrôles `quality`, `unit`, `database`, `e2e`, `security` obligatoires, pas de suppression ni force push. Exiger un reviewer seulement si un second reviewer est disponible. Adapter aux possibilités du plan GitHub et tester le blocage d'une PR avec contrôle échoué. La PR observabilité initiale ne contient pas encore de workflow : activer les contrôles obligatoires après intégration de ces deux PR pour ne pas bloquer cette initialisation sur des jobs absents. Aucune protection distante ne doit être annoncée active sans lecture de sa configuration.
 
 ## Revue et exceptions
 

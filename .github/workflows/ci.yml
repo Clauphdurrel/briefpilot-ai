@@ -101,6 +101,12 @@ jobs:
           name: next-build
       - run: tar -xzf next-build.tgz
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Install PDF inspection tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends poppler-utils
+          pdftotext -v
+          pdfinfo -v
       - run: pnpm test:integration
   e2e:
     name: e2e

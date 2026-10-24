@@ -27,7 +27,7 @@ Le dépôt origin existant est `Clauphdurrel/briefpilot-ai` (public), accessible
 
 Le connecteur est toujours lié à Clauphy-work et avait rejeté la création avec 403 ; le rétablissement de GitHub CLI a permis de créer les deux PR. Le premier run a révélé un test Sentry dont le scénario SDK simulé activé héritait du drapeau E2E : ses drapeaux sont maintenant explicitement isolés dans ce seul scénario. Les 600 tests passent localement avec les variables exactes de protection CI, ainsi que lint et le build sous ces variables.
 
-Une nouvelle révision relancera la CI. La réussite distante n'est pas encore déclarée. Les protections de branches sont documentées, sans modification distante à ce stade ; les PR ne sont pas fusionnées automatiquement. L'étape 24 n'est pas exécutée.
+Le run 40142389821 valide quality/unit/security/e2e, dont 600 tests unitaires et 27 E2E. Le job database révèle ensuite que pdftotext manque sur le runner ; le workflow installe désormais poppler-utils (pdftotext/pdfinfo) avant les intégrations. Une nouvelle révision relance la CI. La réussite distante complète n'est pas encore déclarée. Les protections de branches sont documentées, sans modification distante à ce stade ; les PR ne sont pas fusionnées automatiquement. L'étape 24 n'est pas exécutée.
 
 ## Liens de reprise
 
