@@ -19,8 +19,16 @@
 
 ## Validation distante
 
-Le dépôt origin existant est `Clauphdurrel/briefpilot-ai`, accessible en SSH. Sa branche main est conservée (commit initial 1c9fa76), sans reset ni merge automatique. Une base develop issue de la validation sécurité 3b20cb5 permet des PR successives observabilité puis CI.
+Le dépôt origin existant est `Clauphdurrel/briefpilot-ai`, accessible en SSH. Sa branche main est conservée (commit initial 1c9fa76), sans reset ni merge automatique. Les branches develop (3b20cb5), feature/observability (db327d0) et chore/github-ci (83e1dfc, suivi du présent rapport) ont été publiées sans force push. Elles permettent des PR successives observabilité puis CI.
 
-La connexion API disponible affiche encore Clauphy-work, sans accès au dépôt ; gh renvoie 401. La reconnexion demandée à l'utilisateur est en attente. Tant que cet accès n'est pas établi, la création des PR, les runs Actions et les protections ne sont pas vérifiés. Aucun résultat GitHub vert n'est revendiqué. L'étape 23 ne peut être déclarée terminée sans une PR et ses cinq jobs réussis.
+La connexion API disponible affiche encore Clauphy-work, sans accès au dépôt ; gh renvoie 401. Une tentative effective de création de la PR observabilité vers develop a été rejetée par GitHub avec **403 Resource not accessible by integration**. Aucun numéro de PR n'a été retourné. La reconnexion demandée à l'utilisateur est en attente. La création des PR, les runs Actions et les protections ne sont donc pas vérifiés. Aucun résultat GitHub vert n'est revendiqué. L'étape 23 ne peut être déclarée terminée sans une PR et ses cinq jobs réussis.
 
 Prochaine action : vérifier la connexion du compte ayant accès au dépôt, ouvrir les PR vers develop, contrôler les cinq jobs du SHA publié, puis protéger les branches selon le guide. Ne pas passer au déploiement (étape 24) dans cette tâche.
+
+## Liens de reprise
+
+- [Ouvrir la PR observabilité vers develop](https://github.com/Clauphdurrel/briefpilot-ai/compare/develop...feature/observability?expand=1)
+- [Ouvrir la PR CI vers develop](https://github.com/Clauphdurrel/briefpilot-ai/compare/develop...chore/github-ci?expand=1)
+- [Consulter Actions](https://github.com/Clauphdurrel/briefpilot-ai/actions)
+
+Ces liens ouvrent le formulaire de création ; ils ne représentent pas des PR déjà créées. L'ouverture de la PR CI déclenchera le workflow si GitHub Actions est activé pour le dépôt. Ne déclarer sa réussite qu'après lecture des cinq résultats.
