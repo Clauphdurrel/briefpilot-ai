@@ -69,4 +69,4 @@ Aucun déploiement ni rollback automatique n'est activé ici. À l'étape 24, pr
 
 ## Critère de fin
 
-Une réussite locale ou actionlint ne valide pas une exécution GitHub. Enregistrer l'URL de la PR, le SHA et le run Actions avec les cinq jobs réussis. Tant que ces preuves sont absentes, l'étape 23 est préparée mais sa validation distante reste en attente. L'étape 24 (hébergement/déploiement) n'est pas exécutée par ces workflows.
+Le premier run entièrement réussi et ses résultats sont conservés dans [le rapport de validation](../audits/step23-validation.md). Une réussite locale ou actionlint ne valide pas une exécution GitHub. Enregistrer l'URL de la PR, le SHA et le run Actions avec les cinq jobs réussis. Tant que ces preuves sont absentes, l'étape 23 est préparée mais sa validation distante reste en attente. L'étape 24 (hébergement/déploiement) n'est pas exécutée par ces workflows.

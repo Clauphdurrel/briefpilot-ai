@@ -17,22 +17,30 @@
 - `pnpm audit --audit-level=high` : aucune vulnérabilité connue au 24 octobre 2026 ; aucune exception configurée.
 - L'historique Git a été analysé pour les formats usuels de clés et comparé aux secrets locaux sans en afficher les valeurs. Un motif synthétique dans le test de rejet de credentials est identifié et exclu précisément ; aucune autre détection. Ce contrôle n'est pas un certificat d'absence de tout secret.
 
-## Validation distante
+## Validation distante réussie
 
-Le dépôt origin existant est `Clauphdurrel/briefpilot-ai` (public), accessible en SSH et désormais via GitHub CLI authentifié comme Clauphdurrel avec accès administrateur. Actions est activé. La branche main est conservée (commit initial 1c9fa76), sans reset ni merge automatique. Les branches develop (3b20cb5), feature/observability (db327d0) et chore/github-ci ont été publiées sans force push.
+Validation le 24 octobre 2026 dans le dépôt public `Clauphdurrel/briefpilot-ai`. Connexion GitHub CLI vérifiée comme Clauphdurrel ; Actions activé. Les branches develop (base sécurité 3b20cb5), feature/observability (db327d0) et chore/github-ci sont publiées sans force push. La branche main existante (1c9fa76) est conservée.
 
-- PR observabilité : https://github.com/Clauphdurrel/briefpilot-ai/pull/2, vers develop.
-- PR CI : https://github.com/Clauphdurrel/briefpilot-ai/pull/3, vers develop.
-- Premier run : https://github.com/Clauphdurrel/briefpilot-ai/actions/runs/40142262118.
+- [PR observabilité #2](https://github.com/Clauphdurrel/briefpilot-ai/pull/2), vers develop.
+- [PR CI #3](https://github.com/Clauphdurrel/briefpilot-ai/pull/3), vers develop.
+- [Run entièrement réussi 40142732221](https://github.com/Clauphdurrel/briefpilot-ai/actions/runs/40142732221), événement pull_request, SHA `4e690cbe378460cf1fcd014d6add1c2dbbe283b5`, statut completed/success vérifié par API.
 
-Le connecteur est toujours lié à Clauphy-work et avait rejeté la création avec 403 ; le rétablissement de GitHub CLI a permis de créer les deux PR. Le premier run a révélé un test Sentry dont le scénario SDK simulé activé héritait du drapeau E2E : ses drapeaux sont maintenant explicitement isolés dans ce seul scénario. Les 600 tests passent localement avec les variables exactes de protection CI, ainsi que lint et le build sous ces variables.
+| Job GitHub | Résultat confirmé |
+| --- | --- |
+| quality | Installation verrouillée, génération/validation Prisma, ESLint et build réussis |
+| unit | 600 tests réussis, 38 tests PostgreSQL exclus de cette commande puis exécutés dans database ; rapport JUnit publié |
+| database | 38 tests PostgreSQL et 95 tests HTTP/navigateur réussis, migrations sur base neuve, inspections PDF réelles |
+| e2e | 27 tests desktop/tablette/mobile réussis |
+| security | Audit pnpm réussi sans vulnérabilité connue |
 
-Le run 40142389821 valide quality/unit/security/e2e, dont 600 tests unitaires et 27 E2E. Le job database révèle ensuite que pdftotext manque sur le runner ; le workflow installe désormais poppler-utils (pdftotext/pdfinfo) avant les intégrations. Une nouvelle révision relance la CI. La réussite distante complète n'est pas encore déclarée. Les protections de branches sont documentées, sans modification distante à ce stade ; les PR ne sont pas fusionnées automatiquement. L'étape 24 n'est pas exécutée.
+Total : 760 exécutions de tests réussies avec recouvrement volontaire de certains parcours. Les huit suites HTTP/navigateur comptent 35 + 7 + 8 + 8 + 7 + 12 + 7 + 11 tests, toutes sans échec. Les logs de jobs GitHub ont été lus, pas seulement le statut global.
 
-## Liens de reprise
+Les premiers runs ont permis de corriger deux différences avec l'environnement local : isoler les drapeaux E2E du scénario Sentry dont le SDK est simulé, et installer poppler-utils pour pdftotext/pdfinfo. Aucun test n'est désactivé pour obtenir le résultat vert. La présente mise à jour documentaire est publiée après ce run ; les nouveaux commits de la PR déclenchent à nouveau les mêmes contrôles.
 
-- [Ouvrir la PR observabilité vers develop](https://github.com/Clauphdurrel/briefpilot-ai/compare/develop...feature/observability?expand=1)
-- [Ouvrir la PR CI vers develop](https://github.com/Clauphdurrel/briefpilot-ai/compare/develop...chore/github-ci?expand=1)
-- [Consulter Actions](https://github.com/Clauphdurrel/briefpilot-ai/actions)
+## Revue et suites
 
-Les PR existent désormais aux URLs #2 et #3 ci-dessus. Ces liens de comparaison restent disponibles pour consulter leurs différences. L'ouverture de la PR CI déclenchera le workflow si GitHub Actions est activé pour le dépôt. Ne déclarer sa réussite qu'après lecture des cinq résultats.
+Revue du périmètre CI selon review-code : actions officielles verrouillées, jeton contents:read, aucun secret de production ni déploiement, bases jetables, sandbox PDF conservée, artifacts synthétiques adaptés au dépôt public. Aucun problème bloquant restant identifié dans ce périmètre.
+
+Les PR restent ouvertes ; aucune fusion automatique n'a été effectuée. Intégrer après revue l'observabilité puis la CI, puis activer les protections documentées dans [ci-cd.md](../operations/ci-cd.md). Attendre l'intégration des deux PR avant d'exiger les jobs sur develop : la PR initiale d'observabilité ne contient pas encore de workflow.
+
+Les protections ne sont pas modifiées à distance dans cette tâche (lecture des rulesets : liste vide). Les alertes Sentry/PostHog restent à configurer et tester manuellement selon le guide d'observabilité. Le connecteur GitHub reste lié à Clauphy-work, mais GitHub CLI fournit l'accès utilisé pour cette livraison. L'étape 24 (hébergement/déploiement) n'est pas exécutée.
