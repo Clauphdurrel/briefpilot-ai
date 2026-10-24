@@ -1,3 +1,4 @@
+import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -6,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 export async function checkInterviewBrowser({ base, token, projectId }) {
   const profile = mkdtempSync("/tmp/briefpilot-interview-chrome-");
   const debugPort = Number(process.env.INTERVIEW_BROWSER_PORT ?? 9321);
-  const browser = spawn("/usr/bin/google-chrome", ["--headless=new", "--no-sandbox", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, "about:blank"], { stdio: "ignore" });
+  const browser = spawn(chromium.executablePath(), ["--headless=new", "--no-sandbox", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, "about:blank"], { stdio: "ignore" });
   let socket;
   try {
     let pages;

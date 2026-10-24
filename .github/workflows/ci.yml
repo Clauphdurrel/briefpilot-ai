@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+  NEXT_TELEMETRY_DISABLED: '1'
+  DATABASE_URL: postgresql://briefpilot_ci:ci-only-disposable-password@127.0.0.1:5432/postgres?schema=public
+  AUTH_SECRET: ci-only-synthetic-auth-secret-no-production-value
+  AUTH_GOOGLE_ID: ci-only-google-id
+  AUTH_GOOGLE_SECRET: ci-only-google-secret
+  AUTH_URL: http://localhost:3000
+  OPENAI_API_KEY: ci-only-no-external-provider-key
+  OPENAI_MODEL: test-model
+  OBSERVABILITY_ENABLED: 'false'
+  OBSERVABILITY_TEST_MODE: 'true'
+  NEXT_PUBLIC_OBSERVABILITY_ENABLED: 'false'
+  NEXT_PUBLIC_OBSERVABILITY_TEST_MODE: 'true'
+  POSTHOG_ENABLED: 'false'
+  AI_MONITORING_ENABLED: 'false'
+  SENTRY_DSN: ''
+  NEXT_PUBLIC_SENTRY_DSN: ''
+  E2E_TEST: 'true'
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm prisma validate
+      - run: pnpm lint
+      - run: pnpm build
+      - name: Package the synthetic test build
+        run: tar --exclude=.next/cache -czf next-build.tgz .next
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: next-build
+          path: next-build.tgz
+          retention-days: 1
+          if-no-files-found: error
+  unit:
+    name: unit
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit=unit-results.xml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: unit-results
+          path: unit-results.xml
+          retention-days: 7
+          if-no-files-found: warn
+  database:
+    name: database
+    needs: quality
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-bookworm@sha256:d81f7b51697014367236d07ec58b54153fc28f828b72bf247fe5c7487520bcb0
+        env:
+          POSTGRES_USER: briefpilot_ci
+          POSTGRES_PASSWORD: ci-only-disposable-password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U briefpilot_ci -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: next-build
+      - run: tar -xzf next-build.tgz
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:integration
+  e2e:
+    name: e2e
+    needs: quality
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-bookworm@sha256:d81f7b51697014367236d07ec58b54153fc28f828b72bf247fe5c7487520bcb0
+        env:
+          POSTGRES_USER: briefpilot_ci
+          POSTGRES_PASSWORD: ci-only-disposable-password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U briefpilot_ci -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: next-build
+      - run: tar -xzf next-build.tgz
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: playwright-failures
+          path: /tmp/briefpilot-playwright-results
+          retention-days: 7
+          if-no-files-found: warn
+  security:
+    name: security
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm audit --audit-level=high

@@ -1,0 +1,25 @@
+name: Setup BriefPilot
+description: Node and locked pnpm dependencies
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version-file: .nvmrc
+        package-manager-cache: false
+    - name: Enable pinned package manager
+      shell: bash
+      run: |
+        corepack enable
+        corepack prepare pnpm@11.9.0 --activate
+        node --version
+        pnpm --version
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
+    - shell: bash
+      run: pnpm install --frozen-lockfile
+    - shell: bash
+      run: pnpm prisma generate
