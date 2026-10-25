@@ -10,7 +10,7 @@ export function preparePdfWorkerVercel() {
   writeFileSync(join(directory,'Dockerfile.vercel'),docker);
   const ignore=readFileSync('infra/pdf-worker/Dockerfile.dockerignore','utf8')+'\n!Dockerfile.vercel\n';
   writeFileSync(join(directory,'Dockerfile.vercel.dockerignore'),ignore);
-  writeFileSync(join(directory,'vercel.json'),JSON.stringify({framework:'container'},null,2)+'\n');
+  writeFileSync(join(directory,'vercel.json'),JSON.stringify({framework:'container',git:{deploymentEnabled:false}},null,2)+'\n');
   writeFileSync(join(directory,'DEPLOYMENT.txt'),'Worker source only. No secret or deployment included. Set Preview PORT=8080, PDF_WORKER_SECRET and VERCEL=1. Non-root Chromium sandbox remains required; validate on the actual Vercel runtime before claiming compatibility.\n');
   return {directory,files:[...files,'Dockerfile.vercel','Dockerfile.vercel.dockerignore','vercel.json','DEPLOYMENT.txt'],deployed:false,secretsIncluded:false};
 }
