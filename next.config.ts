@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
     ] }];
   },
+  // The remote renderer is mandatory on Vercel. Do not package Chromium there.
+  ...(process.env.VERCEL === "1" ? { outputFileTracingExcludes: { "/*": ["./node_modules/playwright/**", "./node_modules/playwright-core/**", "./node_modules/.pnpm/playwright*/**", "./infra/**"] } } : {}),
   serverExternalPackages: ["playwright"],
   turbopack: {
     root: process.cwd(),

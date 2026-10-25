@@ -1,0 +1,29 @@
+services:
+  pdf-worker:
+    build:
+      context: .
+      dockerfile: infra/pdf-worker/Dockerfile
+    image: briefpilot-pdf-worker:local
+    init: true
+    user: pwuser
+    ports:
+      - "127.0.0.1:3193:8080"
+    environment:
+      PDF_WORKER_SECRET_FILE: /run/secrets/pdf_worker_secret
+    secrets:
+      - pdf_worker_secret
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./infra/pdf-worker/seccomp_profile.json
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=268435456,mode=1777
+    shm_size: 256m
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 256
+    stop_grace_period: 45s
+secrets:
+  pdf_worker_secret:
+    file: ${PDF_WORKER_SECRET_FILE:?Set PDF_WORKER_SECRET_FILE to a local secret file outside the build context}
