@@ -97,4 +97,12 @@ https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app/api/auth/
 
 AUTH_URL utilise cette origine en Preview/develop. Accéder à l’alias depuis le navigateur connecté au compte Vercel autorisé avant de tester Google. Les probes publics renvoient 302 vers Vercel ; ils vérifient la protection, pas le health applicatif ni le succès OAuth. Aucun bypass créé pour ces probes. Si l’application Google est en mode test, utiliser un compte autorisé dans son audience de test.
 
-Le déploiement CLI n’a pas créé d’alias de branche automatiquement avec le remote SSH personnalisé ; l’alias stable a été associé explicitement. Après chaque futur Preview autorisé, vérifier Ready puis réassigner cet alias au nouveau déploiement. Ne jamais l’associer à main/production dans cette procédure. Les SHA et résultats exacts figurent dans [le rapport](staging-validation.md).
+Le déploiement CLI avec le remote SSH personnalisé n’a pas appliqué les variables Preview/develop malgré ses métadonnées Git génériques et son build Ready. Il a été remplacé par un déploiement issu du gitSource GitHub natif (ref develop et SHA vérifié). Après chaque futur Preview autorisé, vérifier Ready **et la présence des noms de variables Auth/Neon dans le déploiement**, puis associer cet alias au Preview validé. Ne jamais l’associer à main/production dans cette procédure. Les SHA et résultats exacts figurent dans [le rapport](staging-validation.md).
+
+## Éviter le défaut de configuration des premiers Preview CLI
+
+La présence des variables dans Project Settings ne suffit pas. Pour le remote SSH personnalisé de ce projet, privilégier un déploiement manuel depuis la référence GitHub native de develop, en épinglant le SHA réellement validé, sans target production. L’API POST /v13/deployments avec gitSource {type: github, repoId, ref: develop, sha} crée un Preview lorsque target est omis. Voir [API officielle](https://vercel.com/docs/rest-api/deployments/create-a-new-deployment). Les déploiements Git automatiques peuvent rester désactivés.
+
+Avant de fournir l’URL au testeur, lire les métadonnées du déploiement et contrôler, sans afficher de valeurs, la présence de AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_URL, APP_ENV et DATABASE_URL. Leur absence exige de corriger la source/branche du déploiement ; ne pas élargir les secrets à toutes les branches et ne pas mettre de valeurs sous NEXT_PUBLIC_. Ne pas contourner le problème en important tout un fichier .env.
+
+Le premier message utilisateur « Server error / There is a problem with the server configuration » était associé à AUTH_CONFIGURATION_ERROR et aux secrets de branche absents. Après correction, le nouvel essai Google demeure nécessaire ; un build Ready ne prouve pas sa réussite.

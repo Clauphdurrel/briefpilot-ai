@@ -7,8 +7,9 @@
 - PR #2 à #6 fusionnées dans `develop`, dans l’ordre et avec les SHA vérifiés ; `main` reste inchangée.
 - Commit déployé : `5cdb0a1af61bc48a43dc2134c2ad3cf2882ba4d1`. Son arbre est identique au code de la PR #6 validé avant fusion.
 - Les six jobs CI du commit fusionné réussissent : [run 40212326189](https://github.com/Clauphdurrel/briefpilot-ai/actions/runs/40212326189).
-- Premier Preview `dpl_CE846Ma5UAxWm3617LLqLVujADuu` : **READY**, branche develop, cible non-production, build cloud réussi.
-- Actualisation de configuration OAuth `dpl_3icT8peVdkNKBaUo2VCfZdMEJsA8` : **READY**, même commit et même environnement Preview ; configuration AUTH_URL stable appliquée. L’alias staging pointe sur cette actualisation.
+- Premier Preview CLI `dpl_CE846Ma5UAxWm3617LLqLVujADuu` : build **READY**, mais variables Preview/develop absentes du déploiement ; authentification non fonctionnelle.
+- Deuxième Preview CLI `dpl_3icT8peVdkNKBaUo2VCfZdMEJsA8` : même défaut malgré le statut **READY**. La présence des secrets dans le projet ne prouvait pas leur application au déploiement.
+- Preview réparé `dpl_EpUn269r5kNRJM33H3qwxbw3Pn1U` : **READY**, créé par gitSource GitHub natif, repoId vérifié, ref develop et SHA épinglé au même commit validé. Présence effective vérifiée par noms uniquement : AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_URL, APP_ENV, DATABASE_URL. L’alias staging pointe sur ce Preview.
 - Origine stable : https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app ; alias dédié au Preview, sans achat de domaine ni promotion en production.
 - Projet app `briefpilot-ai`, compte duramite32-3695, équipe duramite32-3695s-projects, plan Hobby. Aucun passage à Pro, aucune publication d’image ou déploiement du worker.
 - Les déploiements Git automatiques restent désactivés. Inspection avant upload : 371 entrées, environ 3,9 Mo ; aucun fichier .env, credential ou note personnelle dans le paquet.
@@ -23,7 +24,7 @@
 | Secrets | Fichier staging privé 600 et ignoré ; métadonnées Vercel relues sans affichage de valeur ; aucun secret versionné |
 | HTTPS / protection | Requêtes sans session sur /api/health, /login et /api/auth/providers : 302 vers l’authentification Vercel, également sur l’alias stable ; TLS accepté par le client |
 | Santé applicative | Non validée derrière la protection : le 302 ne prouve pas le contenu de /api/health ni le démarrage d’une session Auth.js |
-| Google OAuth | Identifiants sensibles présents en Preview/develop ; AUTH_URL stable configuré ; callback Google Cloud et connexion réelle restent à confirmer par l’opérateur |
+| Google OAuth | Callback Google Cloud ajouté selon confirmation de l’opérateur ; variables sensibles et origine stable désormais présentes dans le Preview réparé ; nouvel essai de connexion demandé après correction |
 | Worker local | 7 contrats HTTP et vrai PDF Docker : accents, sandbox, non-root, rootfs read-only, authentification/signature/rejeu, concurrence et arrêt propre |
 | Worker distant | Paquet Vercel isolé construit et testé localement ; aucun déploiement worker, URL et sandbox cloud non vérifiées |
 | IA / paiement | Aucun appel OpenAI ni paiement exécuté ; clés/modèle et configuration Lemon Squeezy staging manquants |
@@ -39,7 +40,7 @@ Le projet `briefpilot-pdf-worker-staging` possède seulement le secret PDF parta
 
 ## Points bloquants pour terminer l’étape 26
 
-1. Ajouter/enregistrer dans Google Cloud le callback exact ci-dessous, puis tester login/logout dans le navigateur connecté au compte Vercel autorisé.
+1. Le callback exact ci-dessous est enregistré selon l’opérateur ; tester à nouveau login/logout sur le Preview réparé depuis le navigateur connecté au compte Vercel autorisé.
 2. Configurer une clé et un modèle OpenAI staging ; autoriser séparément les appels réels nécessaires aux parcours IA.
 3. Configurer Lemon Squeezy test : boutique, variantes, API, webhook signé et réception sous protection Preview ; aucun paiement réel.
 4. Autoriser et valider l’hébergement du worker : coûts éventuels, HTTPS, sandbox distante, accès serveur et limites entre instances. Le cache de nonces/concurrence actuel est par processus, pas global sous autoscaling.
@@ -58,3 +59,13 @@ Le build local VERCEL=1/APP_ENV=staging utilise uniquement des paramètres fourn
 Le client/probe prennent en charge PDF_WORKER_VERCEL_BYPASS_SECRET comme en-tête HTTPS optionnel, séparé du secret HMAC et du jeton système de l’app ; aucun jeton réel créé ou envoyé. Les tests couvrent cette séparation et le refus des jetons mal formés/HTTP. Toute activation d’accès au worker reste à autoriser. Voir [worker PDF](pdf-worker.md) et [procédure staging](vercel-staging.md).
 
 Aucun feu vert production. Les sauvegardes/RPO/RTO, le budget et les garanties du runtime cloud restent à confirmer avant lancement.
+
+## Incident OAuth et correction
+
+Le premier essai utilisateur renvoyait « Server error / There is a problem with the server configuration ». Les journaux récents exposent uniquement le code autorisé AUTH_CONFIGURATION_ERROR. La lecture des métadonnées du déploiement confirme l’absence de toutes les variables de branche Auth/Neon ; elles étaient pourtant correctement enregistrées dans le projet Preview/develop. Les métadonnées Git génériques du déploiement CLI avec le remote SSH personnalisé n’avaient pas appliqué la configuration de branche.
+
+Correction : création manuelle autorisée via POST /v13/deployments, gitSource type github, repoId 1234938895, ref develop, sha 5cdb0a1af61bc48a43dc2134c2ad3cf2882ba4d1. Target omis conformément à l’API (Preview), production branch main inchangée. Le nouveau déploiement Ready reçoit les six variables vérifiées ; alias staging réassigné. Aucun secret réexposé, aucune portée élargie à toutes les branches, aucun bypass créé et aucune modification du code nécessaire.
+
+Le statut Ready est donc une preuve de build, pas une preuve de configuration OAuth ou de parcours fonctionnel. Le nouvel essai utilisateur reste attendu avant d’annoncer une connexion réussie. Sur Hobby, la requête de logs avec --since 1h dépassait la rétention disponible ; --since 5m a permis de consulter les codes récents sans afficher de messages sensibles.
+
+Nouvel essai après correction des variables : l’opérateur atteint Google et signale `Erreur 400 : redirect_uri_mismatch`. AUTH_URL a été relu comme paramètre non secret et correspond exactement à l’origine stable. La valeur redirect_uri des détails Google est demandée pour comparaison ; vérifier aussi que le callback a été ajouté au client correspondant à AUTH_GOOGLE_ID. Aucune connexion réussie ni session créée n’est déduite de ce seul message. Ne pas modifier les callbacks ni les secrets sans identifier l’écart exact.
