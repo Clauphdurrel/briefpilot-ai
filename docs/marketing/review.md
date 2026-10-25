@@ -14,6 +14,8 @@ Aucun défaut bloquant confirmé restant dans les parcours marketing testés. Pu
 4. **Couplage au checkout** : les cartes partagent la configuration canonique des plans. La landing ne déclenche aucun checkout ; /pricing conserve le mode Test existant et l’état indisponible lorsque la configuration manque.
 5. **Données sensibles dans la télémétrie** : entrée Zod stricte, enums, HMAC, propriétés réécrites, accord préalable et désactivation par défaut. Aucun texte libre, email ou URL accepté. Le replay et l’autocapture ne sont pas ajoutés.
 
+6. **noindex public masqué par robots.txt en production** : les brouillons légaux, le contact et login doivent rester explorables pour que leur directive noindex soit lue. Ils sont exclus du sitemap et gardent leurs métadonnées noindex ; dashboard/API restent disallowed. Le staging reste intégralement bloqué. Un test vérifie ce cas.
+
 ## Améliorations réalisées
 
 - Préchargement désactivé pour les liens de connexion afin d’éviter des requêtes d’authentification inutiles depuis la vitrine.

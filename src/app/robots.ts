@@ -7,14 +7,8 @@ export default function robots(): MetadataRoute.Robots {
         rules: {
           userAgent: "*",
           allow: "/",
-          disallow: [
-            "/dashboard",
-            "/login",
-            "/api/",
-            "/privacy",
-            "/terms",
-            "/contact",
-          ],
+          // Public noindex pages must remain crawlable for their directive to be read.
+          disallow: ["/dashboard", "/api/"],
         },
         sitemap: `${origin}/sitemap.xml`,
       }

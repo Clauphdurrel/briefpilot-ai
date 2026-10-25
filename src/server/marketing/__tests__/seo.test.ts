@@ -59,6 +59,8 @@ describe("marketing indexing guard", () => {
       /dashboard|login|api|privacy|terms|contact/,
     );
     expect(robots().sitemap).toBe(`${production.SITE_URL}/sitemap.xml`);
+    // Blocking these public pages would prevent a crawler from reading noindex.
+    expect(JSON.stringify(robots().rules)).not.toMatch(/login|privacy|terms|contact/);
     expect(marketingMetadata("Test", "/features").alternates?.canonical).toBe(
       `${production.SITE_URL}/features`,
     );
