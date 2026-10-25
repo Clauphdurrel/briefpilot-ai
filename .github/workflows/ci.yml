@@ -171,3 +171,4 @@ jobs:
           sudo apt-get install --yes --no-install-recommends poppler-utils
       - run: pnpm test:pdf-worker
       - run: pnpm test:pdf-worker:docker
+      - run: pnpm test:pdf-worker:vercel-artifact

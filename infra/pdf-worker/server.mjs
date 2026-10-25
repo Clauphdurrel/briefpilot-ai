@@ -44,11 +44,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     const secret = process.env.PDF_WORKER_SECRET_FILE ? readFileSync(process.env.PDF_WORKER_SECRET_FILE, "utf8").trim() : process.env.PDF_WORKER_SECRET;
     const port = Number(process.env.PORT ?? 8080);
+    const shutdown = Number(process.env.PDF_WORKER_SHUTDOWN_MS ?? 40000);
+    if (!Number.isInteger(shutdown) || shutdown < 1000 || shutdown > 40000) throw new Error("Invalid shutdown timeout");
     if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid port");
     const worker = createPdfWorker({ secret });
     worker.server.listen(port, "0.0.0.0");
     for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, async () => {
-      const deadline = setTimeout(() => process.exit(1), 40000).unref();
+      const deadline = setTimeout(() => process.exit(1), shutdown).unref();
       await worker.close(); clearTimeout(deadline);
     });
   } catch { process.stderr.write('{"event":"pdf_worker_configuration_error"}\n'); process.exitCode = 1; }

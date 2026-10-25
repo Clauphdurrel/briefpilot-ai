@@ -15,6 +15,7 @@ export async function renderWithWorker(html: string, ownerId: string): Promise<B
   const { secret, url } = workerConfig();
   const owner = createHmac("sha256", secret).update(ownerId).digest("hex");
   const body = JSON.stringify({ html, owner });
+  if (process.env.VERCEL === "1" && Buffer.byteLength(body) > 4 * 1024 * 1024) throw new PdfRuntimeError("PDF_TOO_LARGE", 422);
   const signal = AbortSignal.timeout(WORKER_TIMEOUT_MS);
   try {
     const response = await fetch(url, { method: "POST", redirect: "error", cache: "no-store", signal, headers: workerHeaders(body, secret), body });

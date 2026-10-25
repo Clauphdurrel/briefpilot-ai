@@ -1,0 +1,10 @@
+.git
+node_modules
+.env
+.env.*
+.codex
+.agents
+*.log
+src/app/login/ebauche-etape-du-projet.txt
+src/app/login/myprojet.txt
+docs/examples/pdf/*.pdf

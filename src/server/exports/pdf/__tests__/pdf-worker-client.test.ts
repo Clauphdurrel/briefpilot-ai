@@ -54,3 +54,8 @@ it("maps an aborted transport deadline to a sanitized PDF timeout", async () => 
     expect(timeout).toHaveBeenCalledWith(40000);
   } finally { timeout.mockRestore(); }
 });
+it("bounds serialized worker requests on Vercel before sending escaped HTML", async () => {
+  vi.stubEnv("VERCEL", "1");
+  await expect(renderPdf("\0".repeat(800000), "owner")).rejects.toMatchObject({ code: "PDF_TOO_LARGE", status: 422 });
+  expect(network).not.toHaveBeenCalled();
+});

@@ -5,15 +5,17 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { setTimeout as delay } from 'node:timers/promises';
+import { preparePdfWorkerVercel } from './prepare-pdf-worker-vercel.mjs';
 import { workerHeaders } from '../src/server/exports/pdf/pdf-protocol.mjs';
 const name=`briefpilot-pdf-test-${randomUUID()}`,secret=randomBytes(32).toString('hex'),work=mkdtempSync(join(tmpdir(),'briefpilot-pdf-worker-'));
+const vercel=process.argv.includes('--vercel-artifact'), artifact=vercel?preparePdfWorkerVercel():null, imageName=vercel?'briefpilot-pdf-worker:vercel-test':'briefpilot-pdf-worker:step24';
 let created=false;
 const docker=(args)=>execFileSync('docker',args,{encoding:'utf8',stdio:['ignore','pipe','pipe']});
 try {
-  docker(['build','-f','infra/pdf-worker/Dockerfile','-t','briefpilot-pdf-worker:step24','.']);
-  const image=JSON.parse(docker(['image','inspect','briefpilot-pdf-worker:step24']))[0];
+  docker(['build','-f',artifact?join(artifact.directory,'Dockerfile.vercel'):'infra/pdf-worker/Dockerfile','-t',imageName,artifact?.directory??'.']);
+  const image=JSON.parse(docker(['image','inspect',imageName]))[0];
   assert.equal(image.Config.User,'pwuser');assert.ok(!image.Config.Env.some(x=>/SECRET|DATABASE_URL|OPENAI_API_KEY|AUTH_SECRET/.test(x)));
-  docker(['run','--detach','--name',name,'--init','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges=true','--security-opt',`seccomp=${resolve('infra/pdf-worker/seccomp_profile.json')}`,'--tmpfs','/tmp:rw,nosuid,nodev,size=268435456,mode=1777','--shm-size=256m','--memory=2g','--cpus=2','--pids-limit=256','--publish','127.0.0.1::8080','--env',`PDF_WORKER_SECRET=${secret}`,'briefpilot-pdf-worker:step24']);created=true;
+  docker(['run','--detach','--name',name,'--init','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges=true','--security-opt',`seccomp=${resolve('infra/pdf-worker/seccomp_profile.json')}`,'--tmpfs','/tmp:rw,nosuid,nodev,size=268435456,mode=1777','--shm-size=256m','--memory=2g','--cpus=2','--pids-limit=256','--publish','127.0.0.1::8080','--env',`PDF_WORKER_SECRET=${secret}`,imageName]);created=true;
   const state=JSON.parse(docker(['inspect',name]))[0],port=state.NetworkSettings.Ports['8080/tcp'][0].HostPort,base=`http://127.0.0.1:${port}`;
   let ready=false;
   for(let i=0;i<80;i++){try{if((await fetch(base+'/health')).ok){ready=true;break;}}catch{}await delay(100);}
@@ -35,4 +37,4 @@ try {
   assert.equal(JSON.parse(docker(['inspect',name]))[0].State.ExitCode,0);
   console.log('Docker worker passed: real sandboxed PDF, non-root, read-only, request authentication, replay rejection, inert HTML, concurrency, sanitized logs and graceful shutdown.');
 } catch(error) { console.error('Docker worker validation failed:',error instanceof assert.AssertionError ? error.message : 'Inspect Docker availability and the controlled worker logs locally.');process.exitCode=1; }
-finally {if(created)try{docker(['rm','--force',name]);}catch{}rmSync(work,{recursive:true,force:true});}
+finally {if(created)try{docker(['rm','--force',name]);}catch{}rmSync(work,{recursive:true,force:true});if(artifact)rmSync(artifact.directory,{recursive:true,force:true});}

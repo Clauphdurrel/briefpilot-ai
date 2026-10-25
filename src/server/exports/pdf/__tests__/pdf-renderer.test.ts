@@ -54,3 +54,12 @@ it("allows at most two renders per process and one per owner without a queue", a
   release(Buffer.from("%PDF-test")); await Promise.all([a, b]);
   await expect(renderPdf("x", "owner3")).resolves.toBeInstanceOf(Buffer);
 });
+it("bounds PDF size and rendering time in the worker's Vercel runtime", async () => {
+  vi.stubEnv("VERCEL", "1");
+  const { renderPdfLocal } = await import("../pdf-engine.mjs");
+  pdf.mockResolvedValueOnce(Buffer.alloc(4 * 1024 * 1024 + 1));
+  await expect(renderPdfLocal("x", "owner")).rejects.toMatchObject({ code: "PDF_TOO_LARGE" });
+  vi.useFakeTimers(); pdf.mockReturnValueOnce(new Promise(() => {}));
+  const assertion = expect(renderPdfLocal("x", "owner")).rejects.toMatchObject({ code: "PDF_TIMEOUT" });
+  await vi.advanceTimersByTimeAsync(25001); await assertion;
+});
