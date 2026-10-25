@@ -20,7 +20,7 @@ export async function withIsolatedDatabase(callback) {
     if(interrupted)throw new Error('Test setup interrupted');
     await admin.query(`CREATE DATABASE "${database}"`); created=true;
     if(interrupted)throw new Error('Test setup interrupted');
-    const env={...process.env,DATABASE_URL:testUrl.href,NEXT_TELEMETRY_DISABLED:'1',OBSERVABILITY_ENABLED:'false',OBSERVABILITY_TEST_MODE:'true',NEXT_PUBLIC_OBSERVABILITY_TEST_MODE:'true',NEXT_PUBLIC_OBSERVABILITY_ENABLED:'false',POSTHOG_ENABLED:'false',AI_MONITORING_ENABLED:'false',SENTRY_DSN:'',NEXT_PUBLIC_SENTRY_DSN:'',E2E_TEST:'true'};
+    const env={...process.env,DATABASE_URL:testUrl.href,DIRECT_URL:testUrl.href,APP_ENV:'development',VERCEL:'',PDF_RENDER_MODE:'local',PDF_WORKER_URL:'',PDF_WORKER_SECRET:'',NEXT_TELEMETRY_DISABLED:'1',OBSERVABILITY_ENABLED:'false',OBSERVABILITY_TEST_MODE:'true',NEXT_PUBLIC_OBSERVABILITY_TEST_MODE:'true',NEXT_PUBLIC_OBSERVABILITY_ENABLED:'false',POSTHOG_ENABLED:'false',AI_MONITORING_ENABLED:'false',SENTRY_DSN:'',NEXT_PUBLIC_SENTRY_DSN:'',E2E_TEST:'true'};
     await new Promise((resolve,reject)=>{
       migration=spawn(process.execPath,['node_modules/prisma/build/index.js','migrate','deploy'],{env,stdio:['ignore','ignore','pipe']});
       migration.stderr.on('data',()=>{});
