@@ -5,6 +5,8 @@ import { auth } from "@/auth";
 import { DashboardNavigation } from "@/components/dashboard/dashboard-navigation";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/server/actions/auth.actions";
+import { privateMetadata } from "@/lib/marketing-seo";
+export const metadata = privateMetadata;
 
 export default async function DashboardLayout({
   children,

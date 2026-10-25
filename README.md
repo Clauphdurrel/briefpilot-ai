@@ -52,3 +52,5 @@ Le [guide CI GitHub](docs/operations/ci-cd.md) décrit les cinq contrôles, les 
 L’[architecture de déploiement](docs/deployment/architecture.md) décrit le worker PDF Docker, les environnements et les limites Vercel. Le worker peut être validé avec `pnpm test:pdf-worker` et `pnpm test:pdf-worker:docker`.
 
 La [procédure staging Vercel](docs/deployment/vercel-staging.md) et son [rapport de validation](docs/deployment/staging-validation.md) distinguent les contrôles locaux du déploiement réel. `pnpm staging:preflight` ne déploie pas et ne contacte aucun fournisseur sans flags explicites.
+
+La [landing page commerciale](docs/marketing/landing-page.md), sa [configuration SEO](docs/marketing/seo-strategy.md) et son [suivi de conversion facultatif](docs/marketing/conversion-tracking.md) sont décrits avec les [preuves de validation](docs/marketing/validation.md). L’indexation et le suivi marketing sont désactivés par défaut ; les pages légales restent des brouillons.

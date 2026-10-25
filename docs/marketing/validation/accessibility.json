@@ -1,0 +1,42 @@
+{
+  "tool": "axe-core 4.14 via Playwright",
+  "context": "local synthetic preview",
+  "widths": [
+    {
+      "width": 320,
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ]
+    },
+    {
+      "width": 375,
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ]
+    },
+    {
+      "width": 768,
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ]
+    },
+    {
+      "width": 1280,
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ]
+    },
+    {
+      "width": 1440,
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ]
+    }
+  ],
+  "note": "Incomplete color-contrast checks on transformed illustration text require manual review; automated zero violations is not a WCAG certification."
+}

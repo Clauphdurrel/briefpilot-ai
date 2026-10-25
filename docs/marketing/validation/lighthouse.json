@@ -1,0 +1,56 @@
+{
+  "context": "local production build, synthetic configuration, staging indexing intentionally blocked",
+  "measurementDate": "2026-10-25",
+  "results": {
+    "mobile": {
+      "lighthouseVersion": "13.5.0",
+      "scores": {
+        "performance": 93,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "agentic-browsing": 100
+      },
+      "metrics": {
+        "largest-contentful-paint": {
+          "value": 1928.9223000000004,
+          "display": "1.9\u00a0s"
+        },
+        "cumulative-layout-shift": {
+          "value": 0,
+          "display": "0"
+        },
+        "total-blocking-time": {
+          "value": 308,
+          "display": "310\u00a0ms"
+        }
+      },
+      "seoLimitation": "is-crawlable fails because staging deliberately uses noindex; protection retained"
+    },
+    "desktop": {
+      "lighthouseVersion": "13.5.0",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "agentic-browsing": 100
+      },
+      "metrics": {
+        "largest-contentful-paint": {
+          "value": 479.7354,
+          "display": "0.5\u00a0s"
+        },
+        "cumulative-layout-shift": {
+          "value": 0,
+          "display": "0"
+        },
+        "total-blocking-time": {
+          "value": 31,
+          "display": "30\u00a0ms"
+        }
+      },
+      "seoLimitation": "is-crawlable fails because staging deliberately uses noindex; protection retained"
+    }
+  }
+}
