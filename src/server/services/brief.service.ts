@@ -1,3 +1,5 @@
+import { captureBusinessEvent } from "@/server/observability/analytics";
+import { observed } from "@/server/observability/operations";
 import "server-only";
 import { historyLimit, assertHistoryAccess } from "./history-access.service";
 import { lockUsage, reserveUsage } from "./usage.service";
@@ -130,7 +132,7 @@ export async function listWorkspaceBriefs(ownerId: string) {
   return rows.filter((row) => { const count = (counts.get(row.projectId) ?? 0) + 1; counts.set(row.projectId, count); return count <= limit; }).map((row) => ({ ...present(row), projectId: row.projectId, projectName: row.project.name }));
 }
 
-export async function generateBrief(ownerId: string, rawProjectId: string, raw: GenerateBriefRequest) {
+async function generateBriefCore(ownerId: string, rawProjectId: string, raw: GenerateBriefRequest) {
   const projectId = projectIdSchema.parse(rawProjectId);
   const request = generateBriefRequestSchema.parse(raw);
   const ledgerId = `brief_${hash({ projectId, requestId: request.requestId })}`;
@@ -232,3 +234,5 @@ export async function generateBrief(ownerId: string, rawProjectId: string, raw: 
     throw error;
   }
 }
+
+export const generateBrief: typeof generateBriefCore = observed("brief", "generate_brief", generateBriefCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (result, ownerId) => { if (!result.reused) await captureBusinessEvent(ownerId, "brief_generated", result.briefId); });

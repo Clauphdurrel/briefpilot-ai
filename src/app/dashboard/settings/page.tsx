@@ -1,5 +1,10 @@
 import Link from "next/link";
-export default function SettingsPage() {
+import { AnalyticsConsent } from "@/components/settings/analytics-consent";
+import { requireUser } from "@/server/services/auth.service";
+import { prisma } from "@/lib/prisma";
+export default async function SettingsPage() {
+  const user = await requireUser();
+  const preferences = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { analyticsConsent: true } });
   return (
     <div>
       <p className="text-sm text-muted-foreground">Configuration</p>
@@ -7,6 +12,7 @@ export default function SettingsPage() {
       <p className="mt-4 text-muted-foreground">
         <Link href="/dashboard/settings/subscription" className="underline">Gérer mon abonnement et consulter mes quotas</Link>
       </p>
+      <AnalyticsConsent consent={preferences.analyticsConsent} />
     </div>
   );
 }

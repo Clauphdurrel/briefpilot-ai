@@ -1,3 +1,5 @@
+import { captureBusinessEvent } from "@/server/observability/analytics";
+import { observed } from "@/server/observability/operations";
 import "server-only";
 import { historyLimit, assertHistoryAccess } from "./history-access.service";
 import { lockUsage, reserveUsage } from "./usage.service";
@@ -65,7 +67,7 @@ export async function getLatestBacklog(ownerId: string, projectId: string) {
   return versions[0] ? getBacklogById(ownerId, projectId, versions[0].id) : null;
 }
 
-export async function generateBacklog(ownerId: string, rawProjectId: string, raw: unknown) {
+async function generateBacklogCore(ownerId: string, rawProjectId: string, raw: unknown) {
   const projectId = projectIdSchema.parse(rawProjectId), request = generateBacklogRequestSchema.parse(raw);
   const key = { projectId_requestId: { projectId, requestId: request.requestId } };
   const payloadHash = digest(request);
@@ -145,3 +147,5 @@ export async function generateBacklog(ownerId: string, rawProjectId: string, raw
     throw error;
   }
 }
+
+export const generateBacklog: typeof generateBacklogCore = observed("backlog", "generate_backlog", generateBacklogCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (result, ownerId) => { if (!result.reused) await captureBusinessEvent(ownerId, "backlog_generated", result.backlogId); });

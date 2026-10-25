@@ -1,3 +1,6 @@
+import { currentOperation } from "@/server/observability/context";
+import { captureBusinessEvent } from "@/server/observability/analytics";
+import { observed } from "@/server/observability/operations";
 import "server-only";
 
 import { InterviewError } from "@/server/ai/errors";
@@ -20,7 +23,7 @@ function checked(result: MarkdownExport): MarkdownExport {
   if (Buffer.byteLength(result.content, "utf8") > MAX_EXPORT_BYTES) throw new InterviewError("EXPORT_TOO_LARGE", 422, "Ce document dépasse la taille maximale de téléchargement (8 Mo).");
   return result;
 }
-export async function exportBriefMarkdown(ownerId: string, projectId: string, briefId: string): Promise<MarkdownExport> {
+async function exportBriefMarkdownCore(ownerId: string, projectId: string, briefId: string): Promise<MarkdownExport> {
   const row = await getBrief(ownerId, projectId, briefId);
   const stored = storedBriefSchema.safeParse({ schemaVersion: row.schemaVersion, document: row.document, generation: row.generation });
   if (!stored.success) throw new InterviewError("EXPORT_INVALID_DOCUMENT", 422, "Cette version du cahier des charges n’est pas exportable.");
@@ -37,11 +40,17 @@ async function loadBacklog(ownerId: string, projectId: string, backlogId: string
   catch { throw new InterviewError("EXPORT_INVALID_DOCUMENT", 422, "Ce backlog contient des références ou dépendances invalides."); }
   return { row, stored: parsed.data, reference: { version: row.version, createdAt: row.createdAt } };
 }
-export async function exportBacklogMarkdown(ownerId: string, projectId: string, backlogId: string): Promise<MarkdownExport> {
+async function exportBacklogMarkdownCore(ownerId: string, projectId: string, backlogId: string): Promise<MarkdownExport> {
   const { row, stored, reference } = await loadBacklog(ownerId, projectId, backlogId);
   return checked({ content: backlogToMarkdown(stored, reference, row.status), filename: exportFilename(stored.generation.projectName, "backlog", row.version) });
 }
-export async function exportCodexTasksMarkdown(ownerId: string, projectId: string, backlogId: string): Promise<MarkdownExport> {
+async function exportCodexTasksMarkdownCore(ownerId: string, projectId: string, backlogId: string): Promise<MarkdownExport> {
   const { row, stored, reference } = await loadBacklog(ownerId, projectId, backlogId);
   return checked({ content: codexTasksToMarkdown(stored, reference), filename: exportFilename(stored.generation.projectName, "codex-tasks", row.version) });
 }
+
+export const exportBriefMarkdown: typeof exportBriefMarkdownCore = observed("exports", "export_markdown", exportBriefMarkdownCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (_result, ownerId) => { await captureBusinessEvent(ownerId, "markdown_exported", currentOperation()!.operationId!, { documentKind: "brief" }); });
+
+export const exportBacklogMarkdown: typeof exportBacklogMarkdownCore = observed("exports", "export_markdown", exportBacklogMarkdownCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (_result, ownerId) => { await captureBusinessEvent(ownerId, "markdown_exported", currentOperation()!.operationId!, { documentKind: "backlog" }); });
+
+export const exportCodexTasksMarkdown: typeof exportCodexTasksMarkdownCore = observed("exports", "export_markdown", exportCodexTasksMarkdownCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (_result, ownerId) => { await captureBusinessEvent(ownerId, "markdown_exported", currentOperation()!.operationId!, { documentKind: "codex" }); });

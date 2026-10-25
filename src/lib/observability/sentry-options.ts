@@ -11,6 +11,7 @@ const codes = new Set([
   "BACKLOG_INVALID_OUTPUT", "BACKLOG_INVALID_GRAPH", "BACKLOG_TIMEOUT", "BACKLOG_QUOTA", "BACKLOG_NETWORK", "BACKLOG_UNAVAILABLE", "BACKLOG_REFUSAL", "BACKLOG_INCOMPLETE",
   "PDF_TIMEOUT", "PDF_UNAVAILABLE", "PDF_TOO_LARGE", "PDF_BUSY", "EXPORT_SENSITIVE_CONTENT", "EXPORT_INVALID_DOCUMENT",
   "BILLING_PROVIDER_UNAVAILABLE", "BILLING_UNAVAILABLE", "BILLING_INVALID_RESPONSE", "BILLING_NOT_CONFIGURED", "USAGE_UNAVAILABLE",
+  "AUTH_ERROR", "AUTH_ADAPTER_ERROR", "AUTH_SESSION_ERROR", "AUTH_OAUTH_CALLBACK_ERROR", "AUTH_OAUTH_SIGNIN_ERROR", "AUTH_CALLBACK_ERROR", "AUTH_CONFIGURATION_ERROR", "AUTH_UNTRUSTED_HOST",
 ]);
 const safeFunctions = new Set(["GET", "POST", "register", "onRequestError", "reportError", "runInterviewClientAgent", "runBriefGeneratorAgent", "runBacklogGeneratorAgent", "renderPdf", "getOpenAI", "advanceInterview", "generateBrief", "generateBacklog"]);
 const safeFiles = new Set([
@@ -63,7 +64,7 @@ export function readSentryEnvironment(runtime: SentryRuntime): SentryEnvironment
   };
   return { enabled: process.env.OBSERVABILITY_ENABLED, dsn: process.env.SENTRY_DSN,
     environment: process.env.OBSERVABILITY_ENVIRONMENT, nodeEnv: process.env.NODE_ENV,
-    testMode: process.env.OBSERVABILITY_TEST_MODE ?? process.env.E2E_TEST ?? process.env.PLAYWRIGHT_TEST,
+    testMode: [process.env.OBSERVABILITY_TEST_MODE, process.env.E2E_TEST, process.env.PLAYWRIGHT_TEST].some((value) => value === "true" || value === "1") ? "true" : "false",
   };
 }
 export function sentryOptions(runtime: SentryRuntime, env = readSentryEnvironment(runtime)) {

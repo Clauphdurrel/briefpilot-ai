@@ -1,3 +1,5 @@
+import { captureBusinessEvent } from "@/server/observability/analytics";
+import { observed } from "@/server/observability/operations";
 import "server-only";
 import { reserveUsage } from "./usage.service";
 import { runMetered } from "@/server/ai/usage-context";
@@ -89,7 +91,7 @@ function boundedHistory(messages: History, content?: string) {
   return selected.reverse();
 }
 
-export async function advanceInterview(
+async function advanceInterviewCore(
   ownerId: string, rawProjectId: string,
   rawInput: StartInterviewInput | SendInterviewMessageInput,
   mode: "start" | "message",
@@ -189,3 +191,5 @@ export async function advanceInterview(
     throw error;
   }
 }
+
+export const advanceInterview: typeof advanceInterviewCore = observed("interview", "advance_interview", advanceInterviewCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (result, ownerId, projectId, _input, mode) => { const first = result.messages.find((item) => item.role === "assistant"); if (mode === "start" && first) await captureBusinessEvent(ownerId, "interview_started", first.id); if (result.completionScore === 100) await captureBusinessEvent(ownerId, "interview_completed", projectId); });

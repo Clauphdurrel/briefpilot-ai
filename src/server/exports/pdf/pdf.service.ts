@@ -1,3 +1,6 @@
+import { currentOperation } from "@/server/observability/context";
+import { captureBusinessEvent } from "@/server/observability/analytics";
+import { observed } from "@/server/observability/operations";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { reserveUsage, startUsage, commitUsage, releaseUsage } from "@/server/services/usage.service";
@@ -33,15 +36,15 @@ async function loadBacklog(ownerId: string, projectId: string, backlogId: string
   } catch { throw new InterviewError("PDF_INCOMPATIBLE_DOCUMENT", 422, "Le backlog et son cahier des charges source ne sont pas cohérents."); }
   return { row, backlog, brief, reference: { version: row.version, createdAt: row.createdAt } };
 }
-export async function generateBriefPdf(ownerId: string, projectId: string, briefId: string, operationId?: string): Promise<PdfExport> {
+async function generateBriefPdfCore(ownerId: string, projectId: string, briefId: string, operationId?: string): Promise<PdfExport> {
   const brief = await loadBrief(ownerId, projectId, briefId);
   return { content: await renderMeteredPdf(buildBriefHtml(brief), ownerId, operationId), filename: exportFilename(brief.generation.projectName, "brief", brief.generation.version).replace(/\.md$/, ".pdf") };
 }
-export async function generateBacklogPdf(ownerId: string, projectId: string, backlogId: string, operationId?: string): Promise<PdfExport> {
+async function generateBacklogPdfCore(ownerId: string, projectId: string, backlogId: string, operationId?: string): Promise<PdfExport> {
   const { row, backlog, reference } = await loadBacklog(ownerId, projectId, backlogId);
   return { content: await renderMeteredPdf(buildBacklogHtml(backlog, reference, row.status), ownerId, operationId), filename: exportFilename(backlog.generation.projectName, "backlog", row.version).replace(/\.md$/, ".pdf") };
 }
-export async function generateProjectPdf(ownerId: string, projectId: string, briefId: string, backlogId?: string, operationId?: string): Promise<PdfExport> {
+async function generateProjectPdfCore(ownerId: string, projectId: string, briefId: string, backlogId?: string, operationId?: string): Promise<PdfExport> {
   const brief = await loadBrief(ownerId, projectId, briefId);
   const loaded = backlogId ? await loadBacklog(ownerId, projectId, backlogId) : undefined;
   if (loaded && loaded.row.sourceBriefId !== briefId) throw new InterviewError("PDF_INCOMPATIBLE_DOCUMENT", 422, "Choisis le cahier des charges source exact de ce backlog.");
@@ -54,3 +57,9 @@ async function renderMeteredPdf(html: string, ownerId: string, operationId: stri
   try { await startUsage(ticket); const pdf = await renderPdf(html, ownerId); await commitUsage(ticket); return pdf; }
   catch (error) { await releaseUsage(ticket); throw error; }
 }
+
+export const generateBriefPdf: typeof generateBriefPdfCore = observed("pdf", "export_pdf", generateBriefPdfCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (_result, ownerId) => { await captureBusinessEvent(ownerId, "pdf_exported", currentOperation()!.operationId!, { documentKind: "brief" }); });
+
+export const generateBacklogPdf: typeof generateBacklogPdfCore = observed("pdf", "export_pdf", generateBacklogPdfCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (_result, ownerId) => { await captureBusinessEvent(ownerId, "pdf_exported", currentOperation()!.operationId!, { documentKind: "backlog" }); });
+
+export const generateProjectPdf: typeof generateProjectPdfCore = observed("pdf", "export_pdf", generateProjectPdfCore, (ownerId, projectId) => ({ userId: ownerId, projectId }), async (_result, ownerId) => { await captureBusinessEvent(ownerId, "pdf_exported", currentOperation()!.operationId!, { documentKind: "project" }); });

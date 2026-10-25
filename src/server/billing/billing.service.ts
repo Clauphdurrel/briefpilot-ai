@@ -1,3 +1,5 @@
+import { captureBusinessEvent } from "@/server/observability/analytics";
+import { observed } from "@/server/observability/operations";
 import "server-only";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
@@ -10,7 +12,7 @@ import type { BillingProvider, PaidPlan, RemoteSubscription } from "./provider";
 import { billingConfig, safeLemonUrl } from "./config";
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 export type CheckoutBinding = { intentId: string; token: string; userId: string };
-export async function createBillingCheckout(userId: string, plan: PaidPlan, provider: BillingProvider = new LemonSqueezyProvider()) {
+async function createBillingCheckoutCore(userId: string, plan: PaidPlan, provider: BillingProvider = new LemonSqueezyProvider()) {
   billingConfig();
   const token = randomBytes(32).toString("hex");
   const claim = await prisma.$transaction(async (tx) => {
@@ -43,12 +45,12 @@ export async function createBillingCheckout(userId: string, plan: PaidPlan, prov
 function validToken(value: string, digest: string) {
   return /^[a-f0-9]{64}$/.test(digest) && timingSafeEqual(Buffer.from(hash(value), "hex"), Buffer.from(digest, "hex"));
 }
-async function applyRemote(tx: Prisma.TransactionClient, userId: string, remote: RemoteSubscription) {
+async function applyRemote(tx: Prisma.TransactionClient, userId: string, remote: RemoteSubscription): Promise<{ outcome: string; event: "subscription_activated" | "subscription_canceled" | null }> {
   const existing = await tx.subscription.findUnique({ where: { userId } });
   if (existing?.providerSubscriptionId && existing.providerSubscriptionId !== remote.id) {
-    if ((existing.providerCreatedAt && remote.createdAt <= existing.providerCreatedAt) || existing.currentPeriodEnd > new Date()) return "ignored_other_subscription";
+    if ((existing.providerCreatedAt && remote.createdAt <= existing.providerCreatedAt) || existing.currentPeriodEnd > new Date()) return { outcome: "ignored_other_subscription", event: null };
   }
-  if (existing?.providerSubscriptionId === remote.id && existing.providerRevision && BigInt(existing.providerRevision) >= BigInt(remote.revision)) return "ignored_stale";
+  if (existing?.providerSubscriptionId === remote.id && existing.providerRevision && BigInt(existing.providerRevision) >= BigInt(remote.revision)) return { outcome: "ignored_stale", event: null };
   const data = {
     plan: remote.plan, status: remote.status, provider: "LEMONSQUEEZY" as const,
     providerCustomerId: remote.customerId, providerSubscriptionId: remote.id, providerVariantId: remote.variantId,
@@ -59,9 +61,13 @@ async function applyRemote(tx: Prisma.TransactionClient, userId: string, remote:
     limitOverrides: undefined,
   };
   await tx.subscription.upsert({ where: { userId }, create: { userId, ...data }, update: data });
-  return "synchronized";
+  const changedSubscription = existing?.providerSubscriptionId !== remote.id;
+  const event = remote.cancelAtPeriodEnd && (!existing?.cancelAtPeriodEnd || changedSubscription) ? "subscription_canceled"
+    : !remote.cancelAtPeriodEnd && ["ACTIVE", "TRIALING"].includes(remote.status) && remote.plan !== "FREE" &&
+      (!existing || existing.cancelAtPeriodEnd || !["ACTIVE", "TRIALING"].includes(existing.status) || changedSubscription) ? "subscription_activated" : null;
+  return { outcome: "synchronized", event };
 }
-export async function synchronizeSubscription(remote: RemoteSubscription, event: { id: string; name: string; binding?: CheckoutBinding }) {
+async function synchronizeSubscriptionCore(remote: RemoteSubscription, event: { id: string; name: string; binding?: CheckoutBinding }) {
   const bound = await prisma.billingCheckoutIntent.findUnique({ where: { providerSubscriptionId: remote.id } });
   const existing = await prisma.subscription.findUnique({ where: { providerSubscriptionId: remote.id } });
   let intent = bound;
@@ -73,20 +79,24 @@ export async function synchronizeSubscription(remote: RemoteSubscription, event:
   // A paid provider/store can never take over a subscription recorded under another provider.
   if (existing && existing.provider !== "LEMONSQUEEZY") throw new InterviewError("BILLING_PROVIDER_CONFLICT", 409, "Cet abonnement utilise un autre prestataire.");
   if (!bound && !existing && remote.plan === "FREE") throw new InterviewError("BILLING_UNSUPPORTED_VARIANT", 422, "Cette offre n’est pas prise en charge.");
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     await lockUsage(tx, userId);
-    if (await tx.billingWebhookEvent.findUnique({ where: { id: event.id } })) return "duplicate";
+    if (await tx.billingWebhookEvent.findUnique({ where: { id: event.id } })) return { outcome: "duplicate", event: null };
     if (intent && !bound && !existing) {
       const fresh = await tx.billingCheckoutIntent.findUniqueOrThrow({ where: { id: intent.id } });
       if (fresh.providerSubscriptionId && fresh.providerSubscriptionId !== remote.id) throw new InterviewError("BILLING_INVALID_BINDING", 409, "Ce checkout est déjà associé à un abonnement.");
       await tx.billingCheckoutIntent.update({ where: { id: intent.id }, data: { providerSubscriptionId: remote.id, state: "CLAIMED", url: null } });
     }
     const outcome = await applyRemote(tx, userId, remote);
-    await tx.billingWebhookEvent.create({ data: { id: event.id, eventName: event.name, providerSubscriptionId: remote.id, outcome } });
+    await tx.billingWebhookEvent.create({ data: { id: event.id, eventName: event.name, providerSubscriptionId: remote.id, outcome: outcome.outcome } });
     return outcome;
   });
+  try {
+    if (outcome.event) await captureBusinessEvent(userId, outcome.event, `${remote.id}:${remote.revision}`, { plan: remote.plan });
+  } catch { /* Analytics cannot invalidate a synchronized subscription. */ }
+  return outcome.outcome;
 }
-export async function manageBillingSubscription(userId: string, action: "cancel" | "resume" | "portal", provider: BillingProvider = new LemonSqueezyProvider()) {
+async function manageBillingSubscriptionCore(userId: string, action: "cancel" | "resume" | "portal", provider: BillingProvider = new LemonSqueezyProvider()) {
   const row = await prisma.subscription.findUnique({ where: { userId } });
   if (!row?.providerSubscriptionId || row.provider !== "LEMONSQUEEZY" || !row.providerTestMode) throw new InterviewError("SUBSCRIPTION_NOT_FOUND", 404, "Aucun abonnement Lemon Squeezy de test à gérer.");
   const id = row.providerSubscriptionId;
@@ -107,3 +117,9 @@ export async function billingSummary(userId: string) {
     cancelAtPeriodEnd: row?.cancelAtPeriodEnd ?? false, accessEndsAt: row?.accessEndsAt?.toISOString() ?? null,
     periodEnd: row?.currentPeriodEnd.toISOString() ?? null, testMode: row?.providerTestMode ?? false };
 }
+
+export const createBillingCheckout: typeof createBillingCheckoutCore = observed("billing", "checkout", createBillingCheckoutCore, (userId) => ({ userId }), async (result, userId, plan) => { await captureBusinessEvent(userId, "checkout_started", hash(result.url), { plan }); });
+
+export const manageBillingSubscription: typeof manageBillingSubscriptionCore = observed("billing", "manage_subscription", manageBillingSubscriptionCore, (userId) => ({ userId }));
+
+export const synchronizeSubscription: typeof synchronizeSubscriptionCore = observed("billing", "synchronize_subscription", synchronizeSubscriptionCore, () => ({}));

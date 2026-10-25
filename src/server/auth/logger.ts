@@ -1,5 +1,7 @@
 import "server-only";
 import type { NextAuthConfig } from "next-auth";
+import { reportError } from "@/server/observability/errors";
+import { withOperation } from "@/server/observability/context";
 
 const errorCodes: Record<string, string> = {
   AdapterError: "AUTH_ADAPTER_ERROR",
@@ -24,7 +26,13 @@ function errorCode(error: unknown) {
 // logger for each missing method. Never pass original objects to the console.
 export const authLogger = {
   error(error) {
-    try { console.error(JSON.stringify({ event: "auth_error", errorCode: errorCode(error) })); }
+    try {
+      const code = errorCode(error);
+      console.error(JSON.stringify({ event: "auth_error", errorCode: code }));
+      if (code !== "AUTH_INVALID_CHECK" && code !== "AUTH_ACCESS_DENIED") {
+        withOperation({ module: "auth" }, () => reportError(error, { module: "auth", errorCode: code }));
+      }
+    }
     catch { /* Logging must not change authentication behavior. */ }
   },
   warn() {
