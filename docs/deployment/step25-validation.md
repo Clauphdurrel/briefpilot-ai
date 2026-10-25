@@ -1,6 +1,8 @@
-# Étape 25 — préparation Neon, validation distante en attente
+# Étape 25 — Neon staging connecté et migré
 
-État au 25 octobre 2026 : l'utilisateur indique avoir créé le projet Neon. La connexion à ce projet n'est pas encore établie dans les outils et les URLs privées ne sont pas encore disponibles à la validation. **Aucune migration distante n'est appliquée et l'étape 25 n'est pas déclarée terminée.**
+Validation le 25 octobre 2026. Le projet Neon a été créé par l'utilisateur, puis ses connexions ont été renseignées dans le fichier privé. Le dry-run a vérifié une base briefpilot_staging vide, TLS avec certificat/hostname autorisés et six migrations additives. L'utilisateur a explicitement autorisé l'application des six migrations.
+
+**Résultat distant : 6 migrations appliquées, 0 en attente, 16 tables présentes, Prisma migrate status up-to-date.** SELECT 1 fonctionne sur les connexions poolée et directe. Un test opt-in du vrai Prisma Client réussit SELECT 1 et des lectures User/Project/Session/AIUsageLog dans une transaction READ ONLY. Aucun seed, session, paiement ou appel IA n'a été créé.
 
 ## Livré et testé localement
 
@@ -12,16 +14,21 @@
 - 38 tests PostgreSQL et 95 HTTP/navigateur réussis sur une base locale jetable avec une DIRECT_URL externe synthétique volontairement héritée. Le harness l'a remplacée par sa cible locale ; les exemples PDF ont été restaurés.
 - Les harnesses imposent également APP_ENV development, renderer local et paramètres worker vides : aucune configuration privée de l'opérateur ne doit exporter des données de test vers un service distant.
 
-Le fichier .env local reste inchangé. .env.staging.local est ignoré et protégé ; aucune valeur sensible n'est incluse dans Git ou ce rapport. Une exécution de check sans ses connexions a correctement échoué avec une erreur générique, sans contacter un fournisseur ni afficher d'URL.
+Le fichier .env local reste inchangé. .env.staging.local est ignoré et protégé ; aucune valeur sensible n'est incluse dans Git ou ce rapport. Le check sans connexions a d’abord échoué proprement avec une erreur générique ; après leur fourniture, les vérifications distantes décrites ci-dessous ont réussi. Aucune URL n’est affichée.
 
-## Vérifications à terminer avec accès Neon
+## Commandes distantes réellement exécutées
 
-1. Confirmer que le projet/branche et la base briefpilot_staging sont neufs et exclusivement réservés au staging. Le nom initial de branche Neon peut être production dans un projet nouvellement créé ; cela ne remplace pas la vérification du rôle de ce projet.
-2. Renseigner les connexions poolée/directe dans le fichier privé ou connecter Neon ici, puis exécuter check et status.
-3. Lire le plan de deploy dry-run, vérifier les tables/données et demander l'application explicite avant toute migration distante.
-4. Appliquer migrate deploy autorisé, revérifier historique/contraintes et, si souhaité, appliquer le seed fictif explicite.
-5. Vérifier le plan, les accès, les quotas et les sauvegardes/restauration dans Neon ; aucune sauvegarde distante n'est revendiquée active.
+- staging-database.mjs check/status : lecture seule, TLS client vérifié, tables initiales 0, migrations en attente 6.
+- staging-database.mjs deploy sans arguments : dry-run, aucune modification.
+- Après le « Oui, appliquer les 6 migrations staging » de l'utilisateur : deploy --apply --confirm-staging=briefpilot_staging, puis status. Application réussie, historique à jour et 16 tables.
+- NEON_READONLY_CHECK=1 Vitest sur neon.readonly.test.ts : 1 test réussi avec le Prisma Client du projet et la connexion poolée. Aucune fixture distante ni nettoyage destructif.
 
-Voir [database.md](database.md) pour les commandes. Le provisioning et la preuve SELECT 1 distant restent distincts des tests locaux. L'étape 26 ne peut être validée en ligne avant ces résultats.
+La lecture directe du TypeScript généré avec Node seul n'est pas adaptée à ses imports sans extension ; le test utilise le runner TypeScript du projet, comme l'application et les suites existantes. Aucun fichier généré n'est modifié pour contourner ce point.
+
+## Restant avant production
+
+Les sauvegardes, limites du plan, permissions du compte, RPO/RTO et restauration sur branche séparée restent à vérifier dans Neon. Aucun backup ou exercice de restauration n'est annoncé comme effectué. Le seed est disponible mais n'a pas été lancé. Les identifiants restent privés et le développement local n'est pas remplacé par Neon.
+
+L'étape 25 est validée dans son périmètre staging. L'étape 26 exige encore le projet Vercel, le worker HTTPS distant et les vrais parcours utilisateurs en ligne ; une migration réussie n'est pas un déploiement.
 
 L'infrastructure précédente a ses six jobs GitHub réussis : [run étape 24](https://github.com/Clauphdurrel/briefpilot-ai/actions/runs/40197078131), SHA aa47874fcbd4af3721af11e3f508ee2f2e05e953 ; PR #4 vers develop. Les PR préparatoires restent à intégrer après revue, sans fusion automatique.

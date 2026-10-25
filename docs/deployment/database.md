@@ -2,7 +2,7 @@
 
 ## État
 
-Configuration et commandes préparées ; **aucun projet Neon connecté, aucune migration distante et aucune sauvegarde cloud vérifiée à cette livraison locale**. Les accès du compte et les connexions privées sont nécessaires pour terminer l'étape 25. Ne pas confondre ce statut avec un provisioning réussi.
+Neon staging est connecté et vérifié le 25 octobre 2026 : après autorisation explicite de l’utilisateur, les 6 migrations ont été appliquées, 16 tables sont présentes et Prisma migrate status confirme un historique à jour. Le Prisma Client réel réussit SELECT 1 et les lectures de modèles dans une transaction en lecture seule. Aucun seed n’a été exécuté. Les sauvegardes et fenêtres de restauration du plan n’ont pas été vérifiées ; aucune sauvegarde active n’est revendiquée.
 
 ## Cibles et secrets
 

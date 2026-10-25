@@ -77,7 +77,7 @@ export async function runStagingDatabase(action,args=[]) {
     if(result.error||result.status!==0)throw new DatabaseConfigurationError();
     const after=await inspect(config.connections.direct);
     if(compareMigrations(local,after.rows).length)throw new DatabaseConfigurationError();
-    return {...summary,migrationsApplied:local.length,migrationsPending:0,mode:'apply',changesApplied:true};
+    return {...summary,tables:after.names.length,migrationsApplied:local.length,migrationsPending:0,migrationPlan:[],mode:'apply',changesApplied:true};
   }
   if(pending.length)throw new DatabaseConfigurationError();
   if(!apply)return {...summary,mode:'dry-run',seedApplied:false};
