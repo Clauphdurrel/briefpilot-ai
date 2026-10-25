@@ -1,6 +1,6 @@
 # Lemon Squeezy staging — préparation sans paiement réel
 
-État au 25 octobre 2026 : le catalogue distant a été vérifié en lecture seule : boutique EUR, deux variantes Test à prix fixe de 19 et 59 EUR, récurrence mensuelle. Les six paramètres Lemon ont été stockés et leur portée Preview/develop vérifiée chez Vercel après autorisation. Ils attendent un nouveau déploiement pour être actifs. Aucun webhook, checkout ni paiement n’a été créé par l’agent.
+État au 25 octobre 2026 : le catalogue distant a été vérifié en lecture seule : boutique EUR, deux variantes Test à prix fixe de 19 et 59 EUR, récurrence mensuelle. Les six paramètres Lemon ont été stockés et leur portée Preview/develop vérifiée chez Vercel après autorisation, puis activés dans un nouveau Preview Ready. Le webhook Test a été créé après un accord distinct ; sa réception d’un événement fournisseur réel reste à vérifier. Aucun checkout ni paiement n’a été créé par l’agent.
 
 ## Boutique et offres
 
@@ -33,13 +33,15 @@ LEMONSQUEEZY_TEST_MODE="true"
 
 Ne pas confondre product_id et variant_id. Les deux variantes doivent être distinctes et appartenir à la boutique sélectionnée. Avant toute mutation fournisseur, lire/valider les objets Test avec l’API. Ne pas deviner un identifiant absent. Le stockage éventuel de la clé et du secret de webhook chez Vercel doit être autorisé explicitement et limité à l’app Preview/develop.
 
-Un LEMONSQUEEZY_WEBHOOK_SECRET aléatoire de 32 caractères a été préparé sans affichage et stocké comme variable sensible Vercel Preview/develop, avec LEMONSQUEEZY_API_KEY. Il est distinct des secrets Auth, PDF et Vercel. Il n’a pas encore été envoyé à Lemon Squeezy. Les quatre autres paramètres sont non secrets ; leur portée reste Preview/develop.
+Un LEMONSQUEEZY_WEBHOOK_SECRET aléatoire de 32 caractères a été préparé sans affichage et stocké comme variable sensible Vercel Preview/develop, avec LEMONSQUEEZY_API_KEY. Il est distinct des secrets Auth, PDF et Vercel. Il a été transmis uniquement à Lemon Squeezy pour signer le webhook Test, après accord. Les quatre autres paramètres sont non secrets ; leur portée reste Preview/develop.
 
 ## Webhook et protection Preview
 
 Chemin de l’app : /api/webhooks/lemonsqueezy. Origine stable : https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app
 
-Les requêtes publiques sont redirigées vers Vercel Authentication. Il faut donc résoudre l’accès serveur du prestataire avant d’annoncer le webhook fonctionnel. Le jeton du worker PDF ne donne pas accès au projet app et ne doit pas être réutilisé pour Lemon Squeezy. Ne pas ouvrir globalement le Preview pour contourner le problème. Toute création d’un accès Automation dédié à l’app et sa transmission au prestataire dans l’URL de webhook doivent être approuvées séparément ; les permissions du worker ne couvrent pas cette action.
+Les requêtes publiques sont redirigées vers Vercel Authentication. Après accord distinct, un jeton Automation dédié au projet app a été créé et conservé dans le fichier privé sous LEMONSQUEEZY_WEBHOOK_VERCEL_BYPASS_SECRET. L’URL de webhook contenant ce jeton en query est conservée sous LEMONSQUEEZY_WEBHOOK_URL et transmise uniquement à Lemon Squeezy ; ne jamais publier cette URL, ses paramètres ni les réponses brutes de l’API webhooks. Sa portée couvre tous les déploiements du projet app, pas seulement ce chemin. Les contrôles d’authentification applicative et la signature HMAC restent actifs. Le jeton worker n’est pas réutilisé et la protection globale n’est pas désactivée. [Accès Automation Vercel](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation).
+
+Webhook Test vérifié : identifiant 146164, dix événements ci-dessous, boutique attendue et URL privée exacte. Sur le Preview dpl_5NrSUN5eg6tTb5h5szGT9YM7mKB7 : health protégé 200, absence de signature 401 INVALID_WEBHOOK_SIGNATURE ; corps vide JSON signé avec le secret partagé 400 INVALID_WEBHOOK. Ce dernier contrôle prouve la reconnaissance du secret sans simuler un abonnement ni écrire de droit premium. Il ne prouve pas encore une livraison effective de Lemon Squeezy.
 
 Conserver la vérification cryptographique X-Signature sur les octets bruts, l’idempotence et le mode test strict. Aucun droit premium accordé sur un simple retour checkout. Le serveur relit l’abonnement distant et vérifie son lien avec l’intention de checkout et l’utilisateur.
 

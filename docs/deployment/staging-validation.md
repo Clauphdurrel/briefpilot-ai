@@ -8,7 +8,7 @@
 | --- | --- |
 | App | Commit develop `5cdb0a1af61bc48a43dc2134c2ad3cf2882ba4d1`, arbre identique à la PR #6 validée ; PR #2 à #6 fusionnées dans l’ordre ; main inchangée |
 | CI du code app | Six jobs réussis : [run 40212326189](https://github.com/Clauphdurrel/briefpilot-ai/actions/runs/40212326189) |
-| Preview app avec connexion PDF | `dpl_9NaEC1jHUW2UeEvqfdePPjkqu5nJ`, **READY**, target non-production, ref develop ; noms Auth/Neon/OpenAI/PDF effectivement présents |
+| Preview app avec connexion PDF et Lemon Test | `dpl_5NrSUN5eg6tTb5h5szGT9YM7mKB7`, **READY**, target non-production, ref develop ; noms Auth/Neon/OpenAI/PDF et six paramètres Lemon effectivement présents |
 | Alias app | https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app |
 | Worker Preview | `dpl_8Zf4f9uk3YCSAXJHrT9wfh41CHtP`, **READY**, target non-production, secret PDF Preview présent |
 | Source worker | Branche de livraison `deploy/pdf-worker-staging`, commit `0ca72df65052d730a5b5ca32abe4d6827bdb6304` ; 9 fichiers publics ; cinq fichiers source/package comparés octet par octet à l’app validée 5cdb0a1, configuration de livraison Git explicitement manuelle |
@@ -26,7 +26,7 @@ Compte Vercel duramite32-3695, équipe duramite32-3695s-projects, offre Hobby. A
 | Neon staging | TLS client/certificat vérifiés ; 6 migrations autorisées appliquées, 16 tables, historique up-to-date ; aucun reset, db push ni seed |
 | Prisma réel | Test opt-in readonly réussi : SELECT 1 et lectures de modèles sans fixtures distantes |
 | Google / session | L’opérateur atteint le dashboard après Google ; transaction READ ONLY indépendante : 1 compte Google lié, 1 session non expirée ; aucun identifiant personnel ni token affiché |
-| HTTPS app | Probes sans session sur /api/health, /login et /api/auth/providers : redirection vers Vercel Authentication ; TLS accepté ; le 302 ne prouve pas le contenu du health authentifié |
+| HTTPS app | Accès public toujours protégé (302) ; après autorisation du jeton app, GET /api/health répond 200 avec seulement status=ok ; TLS accepté |
 | Worker cloud — santé | GET /health avec accès serveur autorisé : 200 et seulement status=ok ; alias public protégé |
 | Worker cloud — auth | POST /render avec bypass Vercel mais sans auth worker : 401 ; corps modifié avec signature invalide : 401 |
 | Worker cloud — PDF réel | 200, type application/pdf, magic %PDF-, PDF borné à 4 Mio ; texte/accents vérifiés avec pdftotext ; script inerte et absence du marqueur /etc/passwd |
@@ -35,7 +35,7 @@ Compte Vercel duramite32-3695, équipe duramite32-3695s-projects, offre Hobby. A
 | Connexion app → worker | PDF_WORKER_URL stable et PDF_WORKER_VERCEL_BYPASS_SECRET sensible appliqués au Preview app ; aucune valeur de secret affichée |
 | Export PDF métier | Non testé avec un document authentifié depuis l’app : les documents IA réels restent à générer quand le compte OpenAI aura du crédit |
 | OpenAI | Clé/modèle présents, modèle gpt-4.1-mini ; opérateur sans crédit API pour l’instant, aucune génération exécutée par l’agent |
-| Lemon Squeezy | Catalogue distant vérifié en lecture seule : EUR, variantes Test mensuelles fixes 19/59 EUR, boutique correspondante ; six variables stockées et portée Preview/develop vérifiée, secrets sensibles ; nouveau déploiement, webhook et checkout encore à effectuer ; aucun paiement lancé |
+| Lemon Squeezy | Catalogue distant vérifié : EUR, variantes Test mensuelles fixes 19/59 EUR ; six variables actives en Preview/develop. Webhook Test 146164 créé avec dix événements après accord distinct ; signature absente refusée 401, JSON invalide signé reconnu puis refusé 400. Livraison fournisseur, checkout et synchronisation canonique encore à vérifier ; aucun paiement lancé |
 | Sentry/PostHog / BOLA | Projets/réception d’événements distants et isolation entre deux comptes non vérifiés ; collecte externe désactivée |
 
 Pour la modification du générateur d’artefact et des guides : le test Docker de l’artefact Vercel a réussi, ainsi que le lint et git diff --check. La nouvelle tentative de build local n’a pas abouti : Turbopack rencontre une interdiction d’ouvrir un port dans cet environnement ; la tentative Webpack échoue à lire la sortie TypeScript --showConfig. Ces tentatives ne remplacent pas le build précédent réussi ni la CI ; ne pas les annoncer comme réussies. Aucun fichier applicatif n’a été modifié dans cette mise à jour documentaire et de livraison.
@@ -46,7 +46,7 @@ Fichier .env.staging.local ignoré et protégé 600. Dans l’app, uniquement Pr
 
 Le worker reçoit son seul secret métier PDF_WORKER_SECRET en Preview. Un jeton Automation dédié au **projet worker** a été créé après autorisation et stocké côté serveur dans l’app Preview/develop et le fichier privé de probe. Sa portée couvre les déploiements du projet worker, pas seulement /render. Aucun token de compte Vercel, identifiant Neon, clé OpenAI ou secret Google transmis au worker. Signatures HMAC et contrôle d’accès du worker restent actifs après le bypass de la protection Vercel.
 
-Le secret de signature Lemon Squeezy a été généré sans affichage ; le catalogue Test a été vérifié et les paramètres stockés chez Vercel après consentement. Les deux secrets Lemon sont sensibles, les quatre identifiants/mode Test non secrets, tous limités à Preview/develop. Aucun jeton Automation n’existe encore dans le projet app au contrôle effectué. Le consentement reçu ne couvre ni achat/paiement réel, ni activation Live, ni création du webhook ou d’un accès Automation au projet app pour ce webhook.
+Le secret de signature Lemon Squeezy a été généré sans affichage ; le catalogue Test a été vérifié et les paramètres stockés chez Vercel après consentement. Les deux secrets Lemon sont sensibles, les quatre identifiants/mode Test non secrets, tous limités à Preview/develop. Un accord distinct a ensuite autorisé la création d’un jeton Automation dédié au projet app et sa transmission dans l’URL privée à Lemon Squeezy avec le secret de signature, puis la création du webhook Test. Le jeton couvre tous les déploiements du projet app ; il est distinct du jeton worker et ne remplace ni Auth.js ni la signature. Aucun achat/paiement réel ni activation Live autorisé ou exécuté. L’URL contenant ce jeton reste privée, sans publication dans les guides, logs ou PR.
 
 ## Incident : premier déploiement Vercel et déploiements automatiques
 
@@ -71,7 +71,7 @@ Un statut Ready ne prouve ni l’application des variables ni un parcours foncti
 ## Ce qui reste pour terminer l’étape 26
 
 1. Charger le crédit OpenAI à l’initiative de l’opérateur, puis valider les trois agents, leur persistance et les quotas sur données fictives. Voir [budget de démo](cost-estimation.md).
-2. Terminer [Lemon Squeezy Test](lemonsqueezy-staging.md) : activer les paramètres vérifiés par un Preview, raccorder l’accès serveur du webhook sous protection Vercel après autorisation, vérifier signature/idempotence, checkout Test puis statut canonique de l’offre.
+2. Terminer [Lemon Squeezy Test](lemonsqueezy-staging.md) : effectuer un checkout fictif depuis le compte utilisateur, vérifier la livraison fournisseur au webhook configuré, l’idempotence et le statut canonique de l’offre.
 3. Tester l’export Markdown et PDF authentifié avec un document réel de test, les refus/erreurs et le respect des quotas.
 4. Configurer les projets Sentry/PostHog staging et vérifier une réception synthétique autorisée.
 5. Tester logout/reconnexion, deux comptes distincts, l’isolation projet/documents et l’accès privé des amis. Voir [démo privée](private-demo.md).
