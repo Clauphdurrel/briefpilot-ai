@@ -1,0 +1,12 @@
+# Locked to Playwright 1.64.1 and the official linux/amd64 image digest.
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:d65108d1a8095d8b0c4a5e32bf1807a40a5ce90ff0c78473e1116b1c243235e8
+ENV NODE_ENV=production PORT=8080 VERCEL=1 PDF_RENDER_TIMEOUT_MS=25000 PDF_WORKER_SHUTDOWN_MS=29000
+WORKDIR /app
+COPY infra/pdf-worker/package.json infra/pdf-worker/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+COPY src/server/exports/pdf/pdf-engine.mjs src/server/exports/pdf/pdf-protocol.mjs ./src/server/exports/pdf/
+COPY infra/pdf-worker/server.mjs ./infra/pdf-worker/server.mjs
+USER pwuser
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD node -e "fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+CMD ["node", "infra/pdf-worker/server.mjs"]

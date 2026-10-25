@@ -1,0 +1,15 @@
+**
+!infra/
+!infra/pdf-worker/
+!infra/pdf-worker/Dockerfile
+!infra/pdf-worker/package.json
+!infra/pdf-worker/package-lock.json
+!infra/pdf-worker/server.mjs
+!src/
+!src/server/
+!src/server/exports/
+!src/server/exports/pdf/
+!src/server/exports/pdf/pdf-engine.mjs
+!src/server/exports/pdf/pdf-protocol.mjs
+
+!Dockerfile.vercel

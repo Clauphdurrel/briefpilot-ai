@@ -1,0 +1,1 @@
+Worker source only. No secret or deployment included. Set Preview PORT=8080, PDF_WORKER_SECRET and VERCEL=1. Non-root Chromium sandbox remains required; validate on the actual Vercel runtime before claiming compatibility.
