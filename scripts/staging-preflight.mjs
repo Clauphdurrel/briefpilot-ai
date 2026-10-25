@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 import { loadStagingEnvironment, runStagingDatabase } from './staging-database.mjs';
 import { stagingConnections } from '../src/server/database/connection.mjs';
-import { readLimited, workerHeaders } from '../src/server/exports/pdf/pdf-protocol.mjs';
+import { readLimited, workerHeaders, workerProtectionHeaders } from '../src/server/exports/pdf/pdf-protocol.mjs';
 
 export function httpsOrigin(value) {
   try {
@@ -50,7 +50,7 @@ export async function runStagingPreflight(args=[]) {
     const origin=httpsOrigin(values.PDF_WORKER_URL);
     if(origin&&values.PDF_WORKER_SECRET?.length>=32)try{
       const body=JSON.stringify({html:'<h1>BriefPilot staging synthetic probe</h1>',owner:createHmac('sha256',values.PDF_WORKER_SECRET).update('synthetic-staging-probe').digest('hex')});
-      const response=await fetch(origin+'/render',{method:'POST',headers:workerHeaders(body,values.PDF_WORKER_SECRET),body,redirect:'error',signal:AbortSignal.timeout(40000)});
+      const response=await fetch(origin+'/render',{method:'POST',headers:{...workerHeaders(body,values.PDF_WORKER_SECRET),...workerProtectionHeaders(values.PDF_WORKER_VERCEL_BYPASS_SECRET)},body,redirect:'error',signal:AbortSignal.timeout(40000)});
       const pdf=await readLimited(response.body,4*1024*1024);
       checks.worker=response.ok&&response.headers.get('content-type')?.startsWith('application/pdf')&&pdf.subarray(0,5).toString()==='%PDF-'?'passed':'failed';
     }catch{checks.worker='failed';}else checks.worker='not_configured';

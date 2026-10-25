@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { MAX_PDF_BYTES, WORKER_TIMEOUT_MS, PdfRuntimeError, readLimited, secretSchema, workerHeaders } from "./pdf-protocol.mjs";
+import { MAX_PDF_BYTES, WORKER_TIMEOUT_MS, PdfRuntimeError, readLimited, secretSchema, workerHeaders, workerProtectionHeaders } from "./pdf-protocol.mjs";
 
 export function workerConfig() {
   const secret = secretSchema.safeParse(process.env.PDF_WORKER_SECRET);
@@ -9,16 +9,18 @@ export function workerConfig() {
   const local = process.env.APP_ENV !== "staging" && process.env.APP_ENV !== "production" && process.env.VERCEL !== "1" &&
     url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
   if (!secret.success || (!local && url.protocol !== "https:") || url.username || url.password || url.search || url.hash || !["", "/"].includes(url.pathname)) throw new PdfRuntimeError("PDF_UNAVAILABLE", 503);
-  return { secret: secret.data, url: new URL("/render", url) };
+  const protectionHeaders = workerProtectionHeaders(process.env.PDF_WORKER_VERCEL_BYPASS_SECRET);
+  if (Object.keys(protectionHeaders).length && url.protocol !== "https:") throw new PdfRuntimeError("PDF_UNAVAILABLE", 503);
+  return { secret: secret.data, url: new URL("/render", url), protectionHeaders };
 }
 export async function renderWithWorker(html: string, ownerId: string): Promise<Buffer> {
-  const { secret, url } = workerConfig();
+  const { secret, url, protectionHeaders } = workerConfig();
   const owner = createHmac("sha256", secret).update(ownerId).digest("hex");
   const body = JSON.stringify({ html, owner });
   if (process.env.VERCEL === "1" && Buffer.byteLength(body) > 4 * 1024 * 1024) throw new PdfRuntimeError("PDF_TOO_LARGE", 422);
   const signal = AbortSignal.timeout(WORKER_TIMEOUT_MS);
   try {
-    const response = await fetch(url, { method: "POST", redirect: "error", cache: "no-store", signal, headers: workerHeaders(body, secret), body });
+    const response = await fetch(url, { method: "POST", redirect: "error", cache: "no-store", signal, headers: { ...workerHeaders(body, secret), ...protectionHeaders }, body });
     if (!response.ok) {
       const error = JSON.parse((await readLimited(response.body, 2048)).toString("utf8"));
       if (response.status === 429 && error.code === "PDF_BUSY") throw new PdfRuntimeError("PDF_BUSY", 429);

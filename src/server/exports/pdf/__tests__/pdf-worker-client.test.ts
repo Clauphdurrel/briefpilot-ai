@@ -14,8 +14,33 @@ it("signs server-generated HTML with an opaque owner and accepts only a bounded 
   expect((await renderPdf("<p>Document</p>", "PRIVATE_OWNER")).toString()).toContain("%PDF-");
   const [url, init] = network.mock.calls[0];
   expect(String(url)).toBe("https://pdf.example.invalid/render"); expect(init.redirect).toBe("error");
+  expect(init.headers).not.toHaveProperty("x-vercel-protection-bypass");
   expect(JSON.parse(init.body).owner).toMatch(/^[a-f0-9]{64}$/); expect(init.body).not.toContain("PRIVATE_OWNER");
   expect(validSignature(Buffer.from(init.body), process.env.PDF_WORKER_SECRET, Object.fromEntries(Object.entries(init.headers).map(([key, value]) => [key.toLowerCase(), value])))).toBe(true);
+});
+it("sends only the dedicated worker protection token as a header while preserving HMAC authentication", async () => {
+  const token="synthetic-worker-protection-token-32-chars";
+  vi.stubEnv("PDF_WORKER_VERCEL_BYPASS_SECRET",token);
+  vi.stubEnv("VERCEL_AUTOMATION_BYPASS_SECRET","synthetic-application-token-never-forward");
+  network.mockResolvedValue(new Response("%PDF-1.7 synthetic",{headers:{"content-type":"application/pdf"}}));
+  await renderPdf("<p>Document</p>","owner");
+  const [url,init]=network.mock.calls[0];
+  expect(init.headers["x-vercel-protection-bypass"]).toBe(token);
+  expect(init.headers.Authorization).toBe(`Bearer ${process.env.PDF_WORKER_SECRET}`);
+  expect(String(url)).not.toContain(token);
+  expect(init.body).not.toContain(token);
+  expect(JSON.stringify(init)).not.toContain("synthetic-application-token-never-forward");
+  expect(init.redirect).toBe("error");
+});
+it("refuses malformed protection tokens before networking without disclosing them", async () => {
+  vi.stubEnv("PDF_WORKER_VERCEL_BYPASS_SECRET","PRIVATE_BAD_TOKEN\n".repeat(3));
+  await expect(renderPdf("x","owner")).rejects.toMatchObject({code:"PDF_UNAVAILABLE",message:expect.not.stringContaining("PRIVATE")});
+  expect(network).not.toHaveBeenCalled();
+});
+it("refuses forwarding a worker protection token over loopback HTTP", () => {
+  vi.stubEnv("APP_ENV","development");vi.stubEnv("PDF_WORKER_URL","http://127.0.0.1:3193");
+  vi.stubEnv("PDF_WORKER_VERCEL_BYPASS_SECRET","synthetic-worker-protection-token-32-chars");
+  expect(()=>workerConfig()).toThrow();
 });
 it.each(["http://pdf.example.invalid", "https://user:pass@pdf.example.invalid", "https://pdf.example.invalid/?secret=x", "https://pdf.example.invalid/path"])("refuses unsafe configuration %s before networking", async (url) => {
   vi.stubEnv("PDF_WORKER_URL", url); await expect(renderPdf("x", "owner")).rejects.toMatchObject({ code: "PDF_UNAVAILABLE" }); expect(network).not.toHaveBeenCalled();
