@@ -19,7 +19,7 @@ nvm use
 
 Dans link, choisir le compte/équipe prévu, créer ou sélectionner `briefpilot-ai`, framework Next.js, root `./`. Cette commande crée/lit la liaison locale `.vercel/project.json` ; elle ne déploie pas. Ne pas sélectionner d'offre payante ou autre équipe sans intervention de l'opérateur. [Documentation CLI officielle](https://vercel.com/docs/projects/deploy-from-cli).
 
-Conserver production branch main ; utiliser develop pour staging Preview. Les PR #2 à #5 et la préparation Vercel doivent être revues/intégrées dans l'ordre sur develop avant un déploiement de cette branche. Ne pas forcer une fusion/reset pour contourner les contrôles. L’intégration Git est connectée ; createDeployments=disabled est vérifié sur les deux projets et vercel.json désactive les déploiements Git automatiques. Conserver ces protections jusqu’à intervention explicite.
+Conserver production branch main ; utiliser develop pour staging Preview. Les PR #2 à #6 ont été revues puis fusionnées dans develop après autorisation explicite ; le premier Preview utilise leur commit fusionné 5cdb0a1. Ne pas forcer une fusion/reset pour contourner les contrôles. L’intégration Git est connectée ; createDeployments=disabled est vérifié sur les deux projets et vercel.json désactive les déploiements Git automatiques. Conserver ces protections jusqu’à intervention explicite.
 
 ## Configuration Preview
 
@@ -81,6 +81,42 @@ Conserver la version précédente de l'app et le digest du worker. En incident, 
 
 ## État du compte préparé
 
-Au 25 octobre 2026, compte duramite32-3695, équipe duramite32-3695s-projects (Hobby), deux projets créés en lhr1 : briefpilot-ai et briefpilot-pdf-worker-staging. App liée au dépôt GitHub ; zéro déploiement et automatisation Git désactivée. Les quatre secrets autorisés de l’app sont sensibles et limités à Preview/develop ; seul PDF_WORKER_SECRET est partagé avec le worker Preview. DIRECT_URL reste local. Les variables des fournisseurs et les origines HTTPS restent à renseigner avant validation.
+Au 25 octobre 2026, compte duramite32-3695, équipe duramite32-3695s-projects (Hobby), deux projets créés en lhr1 : briefpilot-ai et briefpilot-pdf-worker-staging. App liée au dépôt GitHub ; premier Preview technique Ready et automatisation Git désactivée. Les quatre secrets initiaux, les deux variables Google et la clé OpenAI autorisées sont sensibles et limités à Preview/develop ; seul PDF_WORKER_SECRET est partagé avec le worker Preview. DIRECT_URL reste local. AUTH_URL utilise l’alias stable ; OpenAI est configuré mais ses générations restent à valider ; Lemon et les autres parcours restent à configurer/valider.
 
-La cible worker Vercel utilise le paquet isolé décrit dans [pdf-worker.md](pdf-worker.md), sans Dockerfile à la racine Next.js. La protection Preview est conservée ; préparer un accès serveur restreint avant l’appel app → worker. Ne pas désactiver globalement la protection pour faire passer un probe. Hobby accepte techniquement Docker en bêta ; son usage personnel/non commercial et les coûts éventuels du registre doivent être vérifiés avant lancement. Aucune offre payante n’est activée automatiquement.
+La cible worker Vercel utilise le paquet isolé décrit dans [pdf-worker.md](pdf-worker.md), sans Dockerfile à la racine Next.js. La protection Preview est conservée ; l’accès serveur app → worker utilise désormais le jeton dédié au projet worker, créé après autorisation. Ne pas désactiver globalement la protection pour faire passer un probe. Hobby accepte techniquement Docker en bêta ; son usage personnel/non commercial et les coûts éventuels du registre doivent être vérifiés avant lancement. Aucune offre payante n’est activée automatiquement.
+
+## Premier Preview technique autorisé
+
+Origine stable : https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app
+
+URI à enregistrer dans Google Cloud (client OAuth Web) :
+
+```text
+https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app/api/auth/callback/google
+```
+
+AUTH_URL utilise cette origine en Preview/develop. Accéder à l’alias depuis le navigateur connecté au compte Vercel autorisé avant de tester Google. Les probes publics renvoient 302 vers Vercel ; ils vérifient la protection, pas le health applicatif ni le succès OAuth. Aucun bypass créé pour ces probes. Si l’application Google est en mode test, utiliser un compte autorisé dans son audience de test.
+
+Le déploiement CLI avec le remote SSH personnalisé n’a pas appliqué les variables Preview/develop malgré ses métadonnées Git génériques et son build Ready. Il a été remplacé par un déploiement issu du gitSource GitHub natif (ref develop et SHA vérifié). Après chaque futur Preview autorisé, vérifier Ready **et la présence des noms de variables Auth/Neon dans le déploiement**, puis associer cet alias au Preview validé. Ne jamais l’associer à main/production dans cette procédure. Les SHA et résultats exacts figurent dans [le rapport](staging-validation.md).
+
+## Éviter le défaut de configuration des premiers Preview CLI
+
+La présence des variables dans Project Settings ne suffit pas. Pour le remote SSH personnalisé de ce projet, privilégier un déploiement manuel depuis la référence GitHub native de develop, en épinglant le SHA réellement validé, sans target production. L’API POST /v13/deployments avec gitSource {type: github, repoId, ref: develop, sha} crée un Preview lorsque target est omis. Voir [API officielle](https://vercel.com/docs/rest-api/deployments/create-a-new-deployment). Les déploiements Git automatiques peuvent rester désactivés.
+
+Avant de fournir l’URL au testeur, lire les métadonnées du déploiement et contrôler, sans afficher de valeurs, la présence de AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_URL, APP_ENV et DATABASE_URL. Leur absence exige de corriger la source/branche du déploiement ; ne pas élargir les secrets à toutes les branches et ne pas mettre de valeurs sous NEXT_PUBLIC_. Ne pas contourner le problème en important tout un fichier .env.
+
+Le premier message utilisateur « Server error / There is a problem with the server configuration » était associé à AUTH_CONFIGURATION_ERROR et aux secrets de branche absents. Après correction, le nouvel essai Google demeure nécessaire ; un build Ready ne prouve pas sa réussite.
+
+Validation OAuth : l’opérateur atteint le dashboard via Google ; Neon confirme en lecture seule un compte Google lié et une session non expirée. Le login est validé sur le Preview réparé. Cette preuve ne couvre pas logout, les deux comptes, les agents IA, le paiement, l’export PDF métier ni le monitoring. Le rendu PDF synthétique distant a été validé séparément ensuite.
+
+Configuration OpenAI ajoutée après consentement : OPENAI_API_KEY sensible et OPENAI_MODEL=gpt-4.1-mini non secret, uniquement Preview/develop. Le Preview Ready a été renouvelé depuis le gitSource develop et les noms des variables sont effectivement présents. Tester d’abord sur un projet fictif depuis le dashboard ; démarrer l’interview déclenche un appel facturé à l’usage. Aucun achat/rechargement ni test réel automatique n’est inclus dans l’autorisation de stockage. Ne pas annoncer les trois agents validés tant que leurs réponses réelles et leur persistance ne sont pas vérifiées.
+
+## Règle du premier déploiement et worker livré par Git
+
+Vercel classe le premier déploiement d’un projet Production, même avec --target=preview. Les erreurs/annulations comptent comme premier déploiement ; les ressources supprimées ne comptent plus. Ne pas répéter des créations Preview sur un projet redevenu vide et ne pas copier les secrets Preview vers Production. Le bootstrap technique volontairement échoué du worker a été autorisé séparément, puis supprimé après succès du vrai Preview. [Documentation officielle](https://vercel.com/docs/deployments/environments#first-deployment).
+
+Le worker est livré par une branche d’artefact isolée deploy/pdf-worker-staging, contenant seulement le paquet généré ; ne pas la fusionner dans develop/main. Son vercel.json impose git.deploymentEnabled=false ; le réglage projet seul n’a pas empêché tous les déploiements automatiques observés. Utiliser un gitSource GitHub natif épinglé au SHA publié et vérifier target, source, état et noms des variables avant de connecter l’app.
+
+Worker actuel : Preview Ready 8Zf4…, vrai PDF synthétique vérifié (200, accents, auth/signature, rejeu 409 sur l’instance). Alias https://briefpilot-pdf-worker-staging-duramite32-3695s-projects.vercel.app. L’app utilise PDF_WORKER_URL non secret et le jeton worker dédié sensible, côté serveur et uniquement Preview/develop. Aucun export métier authentifié n’est encore annoncé réussi faute de document IA réel ; les clés/configurations ne remplacent pas ce test.
+
+Pour la suite : [démo privée et amis](private-demo.md), [Lemon Squeezy Test](lemonsqueezy-staging.md), [rapport actualisé](staging-validation.md).
