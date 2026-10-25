@@ -1,4 +1,4 @@
-import { beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -10,4 +10,7 @@ beforeEach(() => {
   vi.stubEnv("PDF_RENDER_MODE", "local");
   vi.stubEnv("PDF_WORKER_URL", "");
   vi.stubEnv("PDF_WORKER_SECRET", "");
+  vi.stubEnv("PDF_WORKER_VERCEL_BYPASS_SECRET", "");
 });
+
+afterEach(() => vi.unstubAllEnvs());

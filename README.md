@@ -50,3 +50,5 @@ L’observabilité est décrite dans [le guide opérateur](docs/operations/obser
 Le [guide CI GitHub](docs/operations/ci-cd.md) décrit les cinq contrôles, les bases jetables et les protections à activer après validation des runs distants.
 
 L’[architecture de déploiement](docs/deployment/architecture.md) décrit le worker PDF Docker, les environnements et les limites Vercel. Le worker peut être validé avec `pnpm test:pdf-worker` et `pnpm test:pdf-worker:docker`.
+
+La [procédure staging Vercel](docs/deployment/vercel-staging.md) et son [rapport de validation](docs/deployment/staging-validation.md) distinguent les contrôles locaux du déploiement réel. `pnpm staging:preflight` ne déploie pas et ne contacte aucun fournisseur sans flags explicites.

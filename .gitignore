@@ -35,3 +35,6 @@ Thumbs.db
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+# Local Vercel project metadata and downloaded environment files
+.vercel/

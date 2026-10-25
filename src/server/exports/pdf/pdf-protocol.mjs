@@ -10,6 +10,15 @@ export class PdfRuntimeError extends Error {
   constructor(code, status, message = "PDF service unavailable") { super(message); this.code = code; this.status = status; }
 }
 export const secretSchema = z.string().min(32).max(256);
+// Optional project-scoped Vercel automation token, separate from worker HMAC.
+// Never use the application's own VERCEL_AUTOMATION_BYPASS_SECRET here.
+/** @param {string | undefined} value
+ * @returns {Record<string, string>} */
+export function workerProtectionHeaders(value) {
+  if (!value) return {};
+  if (!z.string().min(32).max(256).regex(/^[\x21-\x7e]+$/).safeParse(value).success) throw new PdfRuntimeError("PDF_UNAVAILABLE", 503);
+  return { "x-vercel-protection-bypass": value };
+}
 export function sameSecret(actual, expected) {
   return typeof actual === "string" && timingSafeEqual(createHash("sha256").update(actual).digest(), createHash("sha256").update(expected).digest());
 }

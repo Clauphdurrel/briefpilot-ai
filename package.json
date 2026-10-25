@@ -20,7 +20,11 @@
     "db:staging:check": "node scripts/staging-database.mjs check",
     "db:staging:status": "node scripts/staging-database.mjs status",
     "db:staging:deploy": "node scripts/staging-database.mjs deploy",
-    "db:staging:seed": "node scripts/staging-database.mjs seed"
+    "db:staging:seed": "node scripts/staging-database.mjs seed",
+    "staging:preflight": "node scripts/staging-preflight.mjs",
+    "db:staging:prisma-check": "NEON_READONLY_CHECK=1 vitest run src/server/database/__tests__/neon.readonly.test.ts",
+    "pdf:worker:prepare-vercel": "node scripts/prepare-pdf-worker-vercel.mjs",
+    "test:pdf-worker:vercel-artifact": "node scripts/test-pdf-worker-docker.mjs --vercel-artifact"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
