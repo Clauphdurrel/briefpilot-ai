@@ -1,88 +1,79 @@
 # Audit du staging — étape 26
 
-État au 25 octobre 2026 : **premier Preview technique de l’application déployé après autorisation explicite. L’étape 26 reste en cours : la connexion Google et la session Neon sont validées ; les parcours IA, paiement, PDF distant et monitoring restent à valider en ligne.**
+État au 25 octobre 2026 : **application Preview et connexion Google validées, worker PDF Preview fonctionnel sur document synthétique et configuration de connexion appliquée à l’application. L’étape 26 reste en cours : générations IA différées faute de crédit, paiements Test, monitoring et parcours entre deux comptes non encore validés en ligne.**
 
-## Déploiement et preuves
+## Déploiements de référence
 
-- PR #2 à #6 fusionnées dans `develop`, dans l’ordre et avec les SHA vérifiés ; `main` reste inchangée.
-- Commit déployé : `5cdb0a1af61bc48a43dc2134c2ad3cf2882ba4d1`. Son arbre est identique au code de la PR #6 validé avant fusion.
-- Les six jobs CI du commit fusionné réussissent : [run 40212326189](https://github.com/Clauphdurrel/briefpilot-ai/actions/runs/40212326189).
-- Premier Preview CLI `dpl_CE846Ma5UAxWm3617LLqLVujADuu` : build **READY**, mais variables Preview/develop absentes du déploiement ; authentification non fonctionnelle.
-- Deuxième Preview CLI `dpl_3icT8peVdkNKBaUo2VCfZdMEJsA8` : même défaut malgré le statut **READY**. La présence des secrets dans le projet ne prouvait pas leur application au déploiement.
-- Preview réparé `dpl_EpUn269r5kNRJM33H3qwxbw3Pn1U` : **READY**, créé par gitSource GitHub natif, repoId vérifié, ref develop et SHA épinglé au même commit validé. Présence effective vérifiée par noms uniquement : AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_URL, APP_ENV, DATABASE_URL. L’alias staging pointe sur ce Preview.
-- Preview avec OpenAI `dpl_HULHP8Zs2KVemazkxqLgsQ5rWuJu` : **READY**, même gitSource develop/SHA validé. Présence de OPENAI_API_KEY et OPENAI_MODEL vérifiée par noms uniquement, en plus des six variables Auth/Neon. Alias staging réassigné à ce Preview. Aucun appel OpenAI exécuté par l’agent.
-- Origine stable : https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app ; alias dédié au Preview, sans achat de domaine ni promotion en production.
-- Projet app `briefpilot-ai`, compte duramite32-3695, équipe duramite32-3695s-projects, plan Hobby. Aucun passage à Pro, aucune publication d’image ou déploiement du worker.
-- Les déploiements Git automatiques restent désactivés. Inspection avant upload : 371 entrées, environ 3,9 Mo ; aucun fichier .env, credential ou note personnelle dans le paquet.
+| Composant | Source et preuve |
+| --- | --- |
+| App | Commit develop `5cdb0a1af61bc48a43dc2134c2ad3cf2882ba4d1`, arbre identique à la PR #6 validée ; PR #2 à #6 fusionnées dans l’ordre ; main inchangée |
+| CI du code app | Six jobs réussis : [run 40212326189](https://github.com/Clauphdurrel/briefpilot-ai/actions/runs/40212326189) |
+| Preview app avec connexion PDF | `dpl_9NaEC1jHUW2UeEvqfdePPjkqu5nJ`, **READY**, target non-production, ref develop ; noms Auth/Neon/OpenAI/PDF effectivement présents |
+| Alias app | https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app |
+| Worker Preview | `dpl_8Zf4f9uk3YCSAXJHrT9wfh41CHtP`, **READY**, target non-production, secret PDF Preview présent |
+| Source worker | Branche de livraison `deploy/pdf-worker-staging`, commit `0ca72df65052d730a5b5ca32abe4d6827bdb6304` ; 9 fichiers publics ; cinq fichiers source/package comparés octet par octet à l’app validée 5cdb0a1, configuration de livraison Git explicitement manuelle |
+| Alias worker | https://briefpilot-pdf-worker-staging-duramite32-3695s-projects.vercel.app |
+
+La branche worker est un **artefact isolé**, pas une fonctionnalité à fusionner dans develop/main : son Dockerfile.vercel racine sélectionne le runtime conteneur. L’application garde son framework Next.js. Aucun fichier .env, note personnelle ou credential n’a été publié dans cet artefact.
+
+Compte Vercel duramite32-3695, équipe duramite32-3695s-projects, offre Hobby. Aucun passage à Pro, achat de crédits OpenAI, paiement réel ou modification du schéma Neon pour ces déploiements.
 
 ## Contrôles réellement exécutés
 
-| Contrôle | Preuve / état |
+| Contrôle | Résultat / limites |
 | --- | --- |
-| Code / CI | 641 tests unitaires locaux, lint, TypeScript et build VERCEL=1 réussis ; six jobs GitHub réussis, dont PostgreSQL/API, navigateur et worker |
-| Neon staging | Connexions poolée/directe, TLS client et certificat vérifiés ; 6 migrations autorisées appliquées, 16 tables, historique up-to-date ; contrôle readonly répété avec succès |
-| Prisma réel | Test opt-in Neon réussi : transaction READ ONLY, SELECT 1 et lectures de modèles ; aucun seed ni mutation de test |
-| Secrets | Fichier staging privé 600 et ignoré ; métadonnées Vercel relues sans affichage de valeur ; aucun secret versionné |
-| HTTPS / protection | Requêtes sans session sur /api/health, /login et /api/auth/providers : 302 vers l’authentification Vercel, également sur l’alias stable ; TLS accepté par le client |
-| Santé applicative | Non validée derrière la protection : le 302 ne prouve pas le contenu de /api/health ni le démarrage d’une session Auth.js |
-| Google OAuth | L’opérateur confirme l’accès au dashboard après connexion Google ; lecture seule Neon : 1 compte Google lié et 1 session active, sans affichage d’identité ou token. Logout et second compte restent à tester |
-| Worker local | 7 contrats HTTP et vrai PDF Docker : accents, sandbox, non-root, rootfs read-only, authentification/signature/rejeu, concurrence et arrêt propre |
-| Worker distant | Paquet Vercel isolé construit et testé localement ; aucun déploiement worker, URL et sandbox cloud non vérifiées |
-| IA / paiement | Clé OpenAI staging sensible et modèle gpt-4.1-mini appliqués au Preview ; aucune génération exécutée par l’agent, première réponse réelle à valider. Configuration Lemon Squeezy staging manquante, aucun paiement exécuté |
-| Monitoring / BOLA | Réception Sentry/PostHog et isolation de deux comptes en ligne non testées ; collecte externe désactivée |
+| Code / tests | 641 tests unitaires locaux, lint, TypeScript et build VERCEL=1 réussis ; CI app six jobs réussis, dont PostgreSQL/API, navigateur et worker |
+| Neon staging | TLS client/certificat vérifiés ; 6 migrations autorisées appliquées, 16 tables, historique up-to-date ; aucun reset, db push ni seed |
+| Prisma réel | Test opt-in readonly réussi : SELECT 1 et lectures de modèles sans fixtures distantes |
+| Google / session | L’opérateur atteint le dashboard après Google ; transaction READ ONLY indépendante : 1 compte Google lié, 1 session non expirée ; aucun identifiant personnel ni token affiché |
+| HTTPS app | Probes sans session sur /api/health, /login et /api/auth/providers : redirection vers Vercel Authentication ; TLS accepté ; le 302 ne prouve pas le contenu du health authentifié |
+| Worker cloud — santé | GET /health avec accès serveur autorisé : 200 et seulement status=ok ; alias public protégé |
+| Worker cloud — auth | POST /render avec bypass Vercel mais sans auth worker : 401 ; corps modifié avec signature invalide : 401 |
+| Worker cloud — PDF réel | 200, type application/pdf, magic %PDF-, PDF borné à 4 Mio ; texte/accents vérifiés avec pdftotext ; script inerte et absence du marqueur /etc/passwd |
+| Worker cloud — rejeu | Même requête signée refusée avec 409 sur l’instance testée ; cache et concurrence restent par processus, pas globaux sous autoscaling |
+| Sandbox | Le moteur et l’image conservent chromiumSandbox=true et USER pwuser ; aucun --no-sandbox ni capability hôte ajoutée. Docker local valide également non-root, read-only, seccomp, concurrence et arrêt |
+| Connexion app → worker | PDF_WORKER_URL stable et PDF_WORKER_VERCEL_BYPASS_SECRET sensible appliqués au Preview app ; aucune valeur de secret affichée |
+| Export PDF métier | Non testé avec un document authentifié depuis l’app : les documents IA réels restent à générer quand le compte OpenAI aura du crédit |
+| OpenAI | Clé/modèle présents, modèle gpt-4.1-mini ; opérateur sans crédit API pour l’instant, aucune génération exécutée par l’agent |
+| Lemon Squeezy | Catalogue distant vérifié en lecture seule : EUR, variantes Test mensuelles fixes 19/59 EUR, boutique correspondante ; six variables stockées et portée Preview/develop vérifiée, secrets sensibles ; nouveau déploiement, webhook et checkout encore à effectuer ; aucun paiement lancé |
+| Sentry/PostHog / BOLA | Projets/réception d’événements distants et isolation entre deux comptes non vérifiés ; collecte externe désactivée |
 
-Aucun jeton de bypass n’a été créé pour ces probes. La protection Preview `all_except_custom_domains` est conservée. Le compte Vercel connecté dans le navigateur doit autoriser l’accès au Preview avant le test Google ; ne pas ouvrir globalement le staging pour contourner cette étape.
+Pour la modification du générateur d’artefact et des guides : le test Docker de l’artefact Vercel a réussi, ainsi que le lint et git diff --check. La nouvelle tentative de build local n’a pas abouti : Turbopack rencontre une interdiction d’ouvrir un port dans cet environnement ; la tentative Webpack échoue à lire la sortie TypeScript --showConfig. Ces tentatives ne remplacent pas le build précédent réussi ni la CI ; ne pas les annoncer comme réussies. Aucun fichier applicatif n’a été modifié dans cette mise à jour documentaire et de livraison.
 
-## Configuration distante autorisée
+## Secrets et autorisations
 
-Dans l’app, uniquement Preview/develop : DATABASE_URL poolée, AUTH_SECRET, PDF_WORKER_SECRET, ANALYTICS_HMAC_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET et OPENAI_API_KEY sont sensibles et non lisibles. DIRECT_URL reste local. AUTH_URL est un paramètre non secret défini à l’origine stable ci-dessus et enregistré dans le fichier privé local. OPENAI_MODEL=gpt-4.1-mini est non secret et limité à Preview/develop. Les autres paramètres imposent staging, rendu worker, paiement test et observabilité désactivée.
+Fichier .env.staging.local ignoré et protégé 600. Dans l’app, uniquement Preview/develop : DATABASE_URL poolée, AUTH_SECRET, PDF_WORKER_SECRET, ANALYTICS_HMAC_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, OPENAI_API_KEY et PDF_WORKER_VERCEL_BYPASS_SECRET sont sensibles. AUTH_URL, PDF_WORKER_URL et OPENAI_MODEL sont non secrets ; mode staging, rendu worker et Lemon Test imposés. DIRECT_URL reste local.
 
-Le projet `briefpilot-pdf-worker-staging` possède seulement le secret PDF partagé, plus PORT et APP_ENV ; aucun secret Neon, OAuth ou OpenAI. Il n’a pas été déployé. L’autorisation du Preview app n’autorise pas un hébergement worker payant ni un déploiement production.
+Le worker reçoit son seul secret métier PDF_WORKER_SECRET en Preview. Un jeton Automation dédié au **projet worker** a été créé après autorisation et stocké côté serveur dans l’app Preview/develop et le fichier privé de probe. Sa portée couvre les déploiements du projet worker, pas seulement /render. Aucun token de compte Vercel, identifiant Neon, clé OpenAI ou secret Google transmis au worker. Signatures HMAC et contrôle d’accès du worker restent actifs après le bypass de la protection Vercel.
 
-## Points bloquants pour terminer l’étape 26
+Le secret de signature Lemon Squeezy a été généré sans affichage ; le catalogue Test a été vérifié et les paramètres stockés chez Vercel après consentement. Les deux secrets Lemon sont sensibles, les quatre identifiants/mode Test non secrets, tous limités à Preview/develop. Aucun jeton Automation n’existe encore dans le projet app au contrôle effectué. Le consentement reçu ne couvre ni achat/paiement réel, ni activation Live, ni création du webhook ou d’un accès Automation au projet app pour ce webhook.
 
-1. Login Google et dashboard confirmés ; tester logout puis une nouvelle connexion, ainsi que les parcours métier avec deux comptes autorisés.
-2. Valider les trois agents par des essais réels avec données fictives ; clé/modèle staging appliqués, mais validité de la clé, crédit API disponible et réponses structurées restent à confirmer. La dernière autorisation couvre le stockage des paramètres, sans génération ni achat de crédits.
-3. Configurer Lemon Squeezy test : boutique, variantes, API, webhook signé et réception sous protection Preview ; aucun paiement réel.
-4. Autoriser et valider l’hébergement du worker : coûts éventuels, HTTPS, sandbox distante, accès serveur et limites entre instances. Le cache de nonces/concurrence actuel est par processus, pas global sous autoscaling.
-5. Configurer/vérifier les projets monitoring et réception synthétique, puis les parcours authentifiés avec deux comptes et les quotas.
+## Incident : premier déploiement Vercel et déploiements automatiques
+
+La règle a été confirmée dans [la documentation Vercel](https://vercel.com/docs/deployments/environments#first-deployment) : le premier déploiement d’un projet est classé Production même avec une cible Preview ou une branche différente. Un enregistrement ERROR/CANCELED compte ; un déploiement supprimé ne compte plus. Les premiers essais worker, retirés par précaution avant autorisation d’exception, remettaient donc le projet à zéro et reproduisaient cette règle.
+
+Le contrôle étendu a aussi identifié un ancien déploiement automatique app issu de la fusion PR #2 (421349e…), étiqueté Production, et un Preview de l’artefact worker dans le projet app. Ces déploiements identifiés comme issus de nos actions ont été supprimés ; les Preview validés ont été conservés. Aucun secret applicatif n’a été ajouté aux variables Production et aucune donnée Neon n’a été supprimée. Le simple réglage projet createDeployments=disabled n’a pas suffi dans ce parcours ; le paquet worker contient désormais git.deploymentEnabled=false, comme la configuration app.
+
+Après accord explicite de l’opérateur pour une unique initialisation technique du seul worker, un paquet sans code applicatif, FROM scratch avec une commande inexistante, a créé `dpl_81zvZ3zU9DzdWMHKSf1TQSd5nFdf`. Il s’est arrêté en **ERROR** avant de produire une image exécutable. Conservé temporairement, il a permis le vrai Preview 8Zf4… avec ses variables Preview. Une fois le PDF réel vérifié, l’initialisation échouée a été supprimée ; le worker Preview restant évite de réinitialiser le cas « premier déploiement ».
+
+Ne pas recréer un bootstrap sans autorisation ni copier les secrets staging dans Production pour contourner cette règle. Ne pas supprimer tous les déploiements d’un projet actif sans comprendre l’effet sur le prochain déploiement.
+
+## Incident OAuth résolu
+
+Les premiers Preview CLI app étaient Ready sans les variables Preview/develop : les logs récents indiquaient AUTH_CONFIGURATION_ERROR. Le déploiement GitHub natif sur le SHA/ref réels a appliqué ces variables. Le callback exact a ensuite été comparé au redirect_uri envoyé ; après correction côté client Google, l’opérateur a atteint le dashboard et Neon a confirmé la session.
 
 ```text
 https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app/api/auth/callback/google
 ```
 
-Aucun domaine temporaire n’est codé dans l’application. L’alias stable doit être réassigné après les prochains déploiements CLI tant que l’automatisation Git reste désactivée. Conserver le précédent Preview comme point de retour ; aucune migration supplémentaire n’a été exécutée pour ce déploiement.
+Un statut Ready ne prouve ni l’application des variables ni un parcours fonctionnel. Sur Hobby, la lecture des logs a été limitée à une fenêtre récente (--since 5m) après refus d’une fenêtre hors rétention.
 
-## Limites de la validation locale
+## Ce qui reste pour terminer l’étape 26
 
-Le build local VERCEL=1/APP_ENV=staging utilise uniquement des paramètres fournisseurs fictifs. Les 36 manifests ne contiennent aucun fichier du package navigateur Playwright ni le moteur local ; le nom d’un peer Playwright dans le chemin pnpm de Next ne désigne pas le package embarqué. Aucun secret serveur staging détecté dans les 33 fichiers statiques contrôlés.
+1. Charger le crédit OpenAI à l’initiative de l’opérateur, puis valider les trois agents, leur persistance et les quotas sur données fictives. Voir [budget de démo](cost-estimation.md).
+2. Terminer [Lemon Squeezy Test](lemonsqueezy-staging.md) : activer les paramètres vérifiés par un Preview, raccorder l’accès serveur du webhook sous protection Vercel après autorisation, vérifier signature/idempotence, checkout Test puis statut canonique de l’offre.
+3. Tester l’export Markdown et PDF authentifié avec un document réel de test, les refus/erreurs et le respect des quotas.
+4. Configurer les projets Sentry/PostHog staging et vérifier une réception synthétique autorisée.
+5. Tester logout/reconnexion, deux comptes distincts, l’isolation projet/documents et l’accès privé des amis. Voir [démo privée](private-demo.md).
 
-Le client/probe prennent en charge PDF_WORKER_VERCEL_BYPASS_SECRET comme en-tête HTTPS optionnel, séparé du secret HMAC et du jeton système de l’app ; aucun jeton réel créé ou envoyé. Les tests couvrent cette séparation et le refus des jetons mal formés/HTTP. Toute activation d’accès au worker reste à autoriser. Voir [worker PDF](pdf-worker.md) et [procédure staging](vercel-staging.md).
-
-Aucun feu vert production. Les sauvegardes/RPO/RTO, le budget et les garanties du runtime cloud restent à confirmer avant lancement.
-
-## Incident OAuth et correction
-
-Le premier essai utilisateur renvoyait « Server error / There is a problem with the server configuration ». Les journaux récents exposent uniquement le code autorisé AUTH_CONFIGURATION_ERROR. La lecture des métadonnées du déploiement confirme l’absence de toutes les variables de branche Auth/Neon ; elles étaient pourtant correctement enregistrées dans le projet Preview/develop. Les métadonnées Git génériques du déploiement CLI avec le remote SSH personnalisé n’avaient pas appliqué la configuration de branche.
-
-Correction : création manuelle autorisée via POST /v13/deployments, gitSource type github, repoId 1234938895, ref develop, sha 5cdb0a1af61bc48a43dc2134c2ad3cf2882ba4d1. Target omis conformément à l’API (Preview), production branch main inchangée. Le nouveau déploiement Ready reçoit les six variables vérifiées ; alias staging réassigné. Aucun secret réexposé, aucune portée élargie à toutes les branches, aucun bypass créé et aucune modification du code nécessaire.
-
-Le statut Ready est donc une preuve de build, pas une preuve de configuration OAuth ou de parcours fonctionnel. Le nouvel essai utilisateur a ensuite confirmé l’accès au dashboard ; voir la vérification readonly ci-dessous. Sur Hobby, la requête de logs avec --since 1h dépassait la rétention disponible ; --since 5m a permis de consulter les codes récents sans afficher de messages sensibles.
-
-Nouvel essai après correction des variables : l’opérateur atteint Google et signale `Erreur 400 : redirect_uri_mismatch`. AUTH_URL a été relu comme paramètre non secret et correspond exactement à l’origine stable. La valeur redirect_uri des détails Google est demandée pour comparaison ; vérifier aussi que le callback a été ajouté au client correspondant à AUTH_GOOGLE_ID. Aucune connexion réussie ni session créée n’est déduite de ce seul message. Ne pas modifier les callbacks ni les secrets sans identifier l’écart exact.
-
-## Connexion Google validée
-
-Le 25 octobre 2026, l’opérateur confirme avoir atteint le dashboard après connexion Google sur l’alias staging. La vérification indépendante Neon s’exécute dans une transaction READ ONLY et retourne seulement deux compteurs : 1 Account avec provider google et 1 Session non expirée. Aucun email, nom, identifiant, cookie ou token lu/affiché ; aucune mutation de test. Cela confirme la persistance de la connexion OAuth réelle.
-
-La connexion Google n’est plus bloquante. Le logout, un second compte, l’isolation entre comptes et les parcours métier restent distincts et non validés. Les variables OpenAI, Lemon Squeezy et PDF_WORKER_URL sont toujours absentes du fichier privé au moment de ce contrôle ; aucun appel IA ou paiement n’a été exécuté.
-
-## Paramètres OpenAI staging appliqués
-
-Après autorisation explicite, OPENAI_API_KEY a été transféré comme variable sensible et OPENAI_MODEL comme paramètre non secret vers briefpilot-ai, uniquement Preview/develop. Les portées ont été relues sans afficher de valeur de clé. Le modèle retenu est gpt-4.1-mini ; il prend en charge Responses et les sorties structurées requises par les agents selon la documentation officielle consultée. Aucun SDK OpenAI ou endpoint OpenAI n’a été appelé pour ce transfert.
-
-Le Preview GitHub natif a été recréé et atteint Ready ; présence des deux noms de variables vérifiée dans le déploiement, alias stable réassigné et protection conservée. Cela ne prouve pas encore la validité de la clé auprès d’OpenAI ni le succès d’une génération. Un premier test volontaire depuis le dashboard, avec un projet fictif, est proposé à l’opérateur en précisant sa consommation de crédit API ; aucune génération ou recharge automatique.
-
-Documentation : [modèle](https://developers.openai.com/api/docs/models/gpt-4.1-mini), [protection des clés](https://developers.openai.com/api/docs/guides/production-best-practices#api-keys), [tarification](https://developers.openai.com/api/docs/pricing).
-
-L’opérateur a ensuite accepté un premier test réel volontaire depuis le dashboard, sur le projet fictif « Café Démo ». L’action Démarrer l’interview déclenchera un appel API utilisant son crédit OpenAI ; aucun achat/rechargement ni génération par un script de l’agent. Le résultat de ce premier essai reste attendu.
+Aucun feu vert production commerciale. Le rejeu/concurrence entre plusieurs instances, le budget exact des services, sauvegardes/RPO/RTO et limites du compte restent à traiter avant lancement.

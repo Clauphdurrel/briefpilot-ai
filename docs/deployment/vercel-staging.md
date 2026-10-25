@@ -83,7 +83,7 @@ Conserver la version précédente de l'app et le digest du worker. En incident, 
 
 Au 25 octobre 2026, compte duramite32-3695, équipe duramite32-3695s-projects (Hobby), deux projets créés en lhr1 : briefpilot-ai et briefpilot-pdf-worker-staging. App liée au dépôt GitHub ; premier Preview technique Ready et automatisation Git désactivée. Les quatre secrets initiaux, les deux variables Google et la clé OpenAI autorisées sont sensibles et limités à Preview/develop ; seul PDF_WORKER_SECRET est partagé avec le worker Preview. DIRECT_URL reste local. AUTH_URL utilise l’alias stable ; OpenAI est configuré mais ses générations restent à valider ; Lemon et les autres parcours restent à configurer/valider.
 
-La cible worker Vercel utilise le paquet isolé décrit dans [pdf-worker.md](pdf-worker.md), sans Dockerfile à la racine Next.js. La protection Preview est conservée ; préparer un accès serveur restreint avant l’appel app → worker. Ne pas désactiver globalement la protection pour faire passer un probe. Hobby accepte techniquement Docker en bêta ; son usage personnel/non commercial et les coûts éventuels du registre doivent être vérifiés avant lancement. Aucune offre payante n’est activée automatiquement.
+La cible worker Vercel utilise le paquet isolé décrit dans [pdf-worker.md](pdf-worker.md), sans Dockerfile à la racine Next.js. La protection Preview est conservée ; l’accès serveur app → worker utilise désormais le jeton dédié au projet worker, créé après autorisation. Ne pas désactiver globalement la protection pour faire passer un probe. Hobby accepte techniquement Docker en bêta ; son usage personnel/non commercial et les coûts éventuels du registre doivent être vérifiés avant lancement. Aucune offre payante n’est activée automatiquement.
 
 ## Premier Preview technique autorisé
 
@@ -107,6 +107,16 @@ Avant de fournir l’URL au testeur, lire les métadonnées du déploiement et c
 
 Le premier message utilisateur « Server error / There is a problem with the server configuration » était associé à AUTH_CONFIGURATION_ERROR et aux secrets de branche absents. Après correction, le nouvel essai Google demeure nécessaire ; un build Ready ne prouve pas sa réussite.
 
-Dernière validation : l’opérateur atteint le dashboard via Google ; Neon confirme en lecture seule un compte Google lié et une session non expirée. Le login est validé sur le Preview réparé. Cette preuve ne couvre pas encore logout, les deux comptes, les agents IA, le paiement, le PDF distant ni le monitoring.
+Validation OAuth : l’opérateur atteint le dashboard via Google ; Neon confirme en lecture seule un compte Google lié et une session non expirée. Le login est validé sur le Preview réparé. Cette preuve ne couvre pas logout, les deux comptes, les agents IA, le paiement, l’export PDF métier ni le monitoring. Le rendu PDF synthétique distant a été validé séparément ensuite.
 
 Configuration OpenAI ajoutée après consentement : OPENAI_API_KEY sensible et OPENAI_MODEL=gpt-4.1-mini non secret, uniquement Preview/develop. Le Preview Ready a été renouvelé depuis le gitSource develop et les noms des variables sont effectivement présents. Tester d’abord sur un projet fictif depuis le dashboard ; démarrer l’interview déclenche un appel facturé à l’usage. Aucun achat/rechargement ni test réel automatique n’est inclus dans l’autorisation de stockage. Ne pas annoncer les trois agents validés tant que leurs réponses réelles et leur persistance ne sont pas vérifiées.
+
+## Règle du premier déploiement et worker livré par Git
+
+Vercel classe le premier déploiement d’un projet Production, même avec --target=preview. Les erreurs/annulations comptent comme premier déploiement ; les ressources supprimées ne comptent plus. Ne pas répéter des créations Preview sur un projet redevenu vide et ne pas copier les secrets Preview vers Production. Le bootstrap technique volontairement échoué du worker a été autorisé séparément, puis supprimé après succès du vrai Preview. [Documentation officielle](https://vercel.com/docs/deployments/environments#first-deployment).
+
+Le worker est livré par une branche d’artefact isolée deploy/pdf-worker-staging, contenant seulement le paquet généré ; ne pas la fusionner dans develop/main. Son vercel.json impose git.deploymentEnabled=false ; le réglage projet seul n’a pas empêché tous les déploiements automatiques observés. Utiliser un gitSource GitHub natif épinglé au SHA publié et vérifier target, source, état et noms des variables avant de connecter l’app.
+
+Worker actuel : Preview Ready 8Zf4…, vrai PDF synthétique vérifié (200, accents, auth/signature, rejeu 409 sur l’instance). Alias https://briefpilot-pdf-worker-staging-duramite32-3695s-projects.vercel.app. L’app utilise PDF_WORKER_URL non secret et le jeton worker dédié sensible, côté serveur et uniquement Preview/develop. Aucun export métier authentifié n’est encore annoncé réussi faute de document IA réel ; les clés/configurations ne remplacent pas ce test.
+
+Pour la suite : [démo privée et amis](private-demo.md), [Lemon Squeezy Test](lemonsqueezy-staging.md), [rapport actualisé](staging-validation.md).
