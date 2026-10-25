@@ -9,6 +9,7 @@ Contrôles locaux du 25 octobre 2026. Aucun déploiement, appel OpenAI réel, pa
 | Lint | Réussi : pnpm lint |
 | Build de production | Réussi : Prisma generate + Next.js build, Turbopack et TypeScript |
 | Vitest | 663 tests réussis, 39 ignorés par les garde-fous de suites d’intégration opt-in |
+| Intégration PostgreSQL/API complète | 133 tests réussis sur base locale jetable : quotas, concurrence, auth, documents, exports PDF/Markdown et Lemon simulé ; cinq exemples PDF existants restaurés octet par octet |
 | Playwright complet | 37 réussis ; 2 matrices de captures redondantes ignorées, les cinq tailles étant vérifiées dans le projet desktop |
 | Revalidation marketing après corrections | 10 réussis, 2 matrices redondantes ignorées |
 | Responsive | 320, 375, 768, 1280, 1440 px ; pas de débordement horizontal, CTA principaux ≥ 40 px, reduced motion vérifié |

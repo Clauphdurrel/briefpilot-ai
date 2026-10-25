@@ -16,6 +16,8 @@ Aucun défaut bloquant confirmé restant dans les parcours marketing testés. Pu
 
 6. **noindex public masqué par robots.txt en production** : les brouillons légaux, le contact et login doivent rester explorables pour que leur directive noindex soit lue. Ils sont exclus du sitemap et gardent leurs métadonnées noindex ; dashboard/API restent disallowed. Le staging reste intégralement bloqué. Un test vérifie ce cas.
 
+7. **Repère obsolète du test navigateur d’abonnement** : le test attendait l’ancien titre de /pricing. Il utilise désormais la région « Comparaison des offres » ; les assertions des quotas, boutons de paiement désactivés et réactivation des projets sont conservées. Toute la campagne PostgreSQL/API locale a été relancée avec succès.
+
 ## Améliorations réalisées
 
 - Préchargement désactivé pour les liens de connexion afin d’éviter des requêtes d’authentification inutiles depuis la vitrine.
