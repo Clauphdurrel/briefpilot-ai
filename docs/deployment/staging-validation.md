@@ -1,6 +1,6 @@
 # Audit du staging — étape 26
 
-État au 25 octobre 2026 : **premier Preview technique de l’application déployé après autorisation explicite. L’étape 26 reste en cours : les parcours Google authentifiés, IA, paiement, PDF distant et monitoring ne sont pas validés en ligne.**
+État au 25 octobre 2026 : **premier Preview technique de l’application déployé après autorisation explicite. L’étape 26 reste en cours : la connexion Google et la session Neon sont validées ; les parcours IA, paiement, PDF distant et monitoring restent à valider en ligne.**
 
 ## Déploiement et preuves
 
@@ -24,7 +24,7 @@
 | Secrets | Fichier staging privé 600 et ignoré ; métadonnées Vercel relues sans affichage de valeur ; aucun secret versionné |
 | HTTPS / protection | Requêtes sans session sur /api/health, /login et /api/auth/providers : 302 vers l’authentification Vercel, également sur l’alias stable ; TLS accepté par le client |
 | Santé applicative | Non validée derrière la protection : le 302 ne prouve pas le contenu de /api/health ni le démarrage d’une session Auth.js |
-| Google OAuth | Callback Google Cloud ajouté selon confirmation de l’opérateur ; variables sensibles et origine stable désormais présentes dans le Preview réparé ; nouvel essai de connexion demandé après correction |
+| Google OAuth | L’opérateur confirme l’accès au dashboard après connexion Google ; lecture seule Neon : 1 compte Google lié et 1 session active, sans affichage d’identité ou token. Logout et second compte restent à tester |
 | Worker local | 7 contrats HTTP et vrai PDF Docker : accents, sandbox, non-root, rootfs read-only, authentification/signature/rejeu, concurrence et arrêt propre |
 | Worker distant | Paquet Vercel isolé construit et testé localement ; aucun déploiement worker, URL et sandbox cloud non vérifiées |
 | IA / paiement | Aucun appel OpenAI ni paiement exécuté ; clés/modèle et configuration Lemon Squeezy staging manquants |
@@ -40,7 +40,7 @@ Le projet `briefpilot-pdf-worker-staging` possède seulement le secret PDF parta
 
 ## Points bloquants pour terminer l’étape 26
 
-1. Le callback exact ci-dessous est enregistré selon l’opérateur ; tester à nouveau login/logout sur le Preview réparé depuis le navigateur connecté au compte Vercel autorisé.
+1. Login Google et dashboard confirmés ; tester logout puis une nouvelle connexion, ainsi que les parcours métier avec deux comptes autorisés.
 2. Configurer une clé et un modèle OpenAI staging ; autoriser séparément les appels réels nécessaires aux parcours IA.
 3. Configurer Lemon Squeezy test : boutique, variantes, API, webhook signé et réception sous protection Preview ; aucun paiement réel.
 4. Autoriser et valider l’hébergement du worker : coûts éventuels, HTTPS, sandbox distante, accès serveur et limites entre instances. Le cache de nonces/concurrence actuel est par processus, pas global sous autoscaling.
@@ -66,6 +66,12 @@ Le premier essai utilisateur renvoyait « Server error / There is a problem with
 
 Correction : création manuelle autorisée via POST /v13/deployments, gitSource type github, repoId 1234938895, ref develop, sha 5cdb0a1af61bc48a43dc2134c2ad3cf2882ba4d1. Target omis conformément à l’API (Preview), production branch main inchangée. Le nouveau déploiement Ready reçoit les six variables vérifiées ; alias staging réassigné. Aucun secret réexposé, aucune portée élargie à toutes les branches, aucun bypass créé et aucune modification du code nécessaire.
 
-Le statut Ready est donc une preuve de build, pas une preuve de configuration OAuth ou de parcours fonctionnel. Le nouvel essai utilisateur reste attendu avant d’annoncer une connexion réussie. Sur Hobby, la requête de logs avec --since 1h dépassait la rétention disponible ; --since 5m a permis de consulter les codes récents sans afficher de messages sensibles.
+Le statut Ready est donc une preuve de build, pas une preuve de configuration OAuth ou de parcours fonctionnel. Le nouvel essai utilisateur a ensuite confirmé l’accès au dashboard ; voir la vérification readonly ci-dessous. Sur Hobby, la requête de logs avec --since 1h dépassait la rétention disponible ; --since 5m a permis de consulter les codes récents sans afficher de messages sensibles.
 
 Nouvel essai après correction des variables : l’opérateur atteint Google et signale `Erreur 400 : redirect_uri_mismatch`. AUTH_URL a été relu comme paramètre non secret et correspond exactement à l’origine stable. La valeur redirect_uri des détails Google est demandée pour comparaison ; vérifier aussi que le callback a été ajouté au client correspondant à AUTH_GOOGLE_ID. Aucune connexion réussie ni session créée n’est déduite de ce seul message. Ne pas modifier les callbacks ni les secrets sans identifier l’écart exact.
+
+## Connexion Google validée
+
+Le 25 octobre 2026, l’opérateur confirme avoir atteint le dashboard après connexion Google sur l’alias staging. La vérification indépendante Neon s’exécute dans une transaction READ ONLY et retourne seulement deux compteurs : 1 Account avec provider google et 1 Session non expirée. Aucun email, nom, identifiant, cookie ou token lu/affiché ; aucune mutation de test. Cela confirme la persistance de la connexion OAuth réelle.
+
+La connexion Google n’est plus bloquante. Le logout, un second compte, l’isolation entre comptes et les parcours métier restent distincts et non validés. Les variables OpenAI, Lemon Squeezy et PDF_WORKER_URL sont toujours absentes du fichier privé au moment de ce contrôle ; aucun appel IA ou paiement n’a été exécuté.

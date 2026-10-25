@@ -106,3 +106,5 @@ La présence des variables dans Project Settings ne suffit pas. Pour le remote S
 Avant de fournir l’URL au testeur, lire les métadonnées du déploiement et contrôler, sans afficher de valeurs, la présence de AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET, AUTH_URL, APP_ENV et DATABASE_URL. Leur absence exige de corriger la source/branche du déploiement ; ne pas élargir les secrets à toutes les branches et ne pas mettre de valeurs sous NEXT_PUBLIC_. Ne pas contourner le problème en important tout un fichier .env.
 
 Le premier message utilisateur « Server error / There is a problem with the server configuration » était associé à AUTH_CONFIGURATION_ERROR et aux secrets de branche absents. Après correction, le nouvel essai Google demeure nécessaire ; un build Ready ne prouve pas sa réussite.
+
+Dernière validation : l’opérateur atteint le dashboard via Google ; Neon confirme en lecture seule un compte Google lié et une session non expirée. Le login est validé sur le Preview réparé. Cette preuve ne couvre pas encore logout, les deux comptes, les agents IA, le paiement, le PDF distant ni le monitoring.
