@@ -19,7 +19,7 @@ nvm use
 
 Dans link, choisir le compte/équipe prévu, créer ou sélectionner `briefpilot-ai`, framework Next.js, root `./`. Cette commande crée/lit la liaison locale `.vercel/project.json` ; elle ne déploie pas. Ne pas sélectionner d'offre payante ou autre équipe sans intervention de l'opérateur. [Documentation CLI officielle](https://vercel.com/docs/projects/deploy-from-cli).
 
-Conserver production branch main ; utiliser develop pour staging Preview. Les PR #2 à #5 et la préparation Vercel doivent être revues/intégrées dans l'ordre sur develop avant un déploiement de cette branche. Ne pas forcer une fusion/reset pour contourner les contrôles. L’intégration Git est connectée ; createDeployments=disabled est vérifié sur les deux projets et vercel.json désactive les déploiements Git automatiques. Conserver ces protections jusqu’à intervention explicite.
+Conserver production branch main ; utiliser develop pour staging Preview. Les PR #2 à #6 ont été revues puis fusionnées dans develop après autorisation explicite ; le premier Preview utilise leur commit fusionné 5cdb0a1. Ne pas forcer une fusion/reset pour contourner les contrôles. L’intégration Git est connectée ; createDeployments=disabled est vérifié sur les deux projets et vercel.json désactive les déploiements Git automatiques. Conserver ces protections jusqu’à intervention explicite.
 
 ## Configuration Preview
 
@@ -81,6 +81,20 @@ Conserver la version précédente de l'app et le digest du worker. En incident, 
 
 ## État du compte préparé
 
-Au 25 octobre 2026, compte duramite32-3695, équipe duramite32-3695s-projects (Hobby), deux projets créés en lhr1 : briefpilot-ai et briefpilot-pdf-worker-staging. App liée au dépôt GitHub ; zéro déploiement et automatisation Git désactivée. Les quatre secrets autorisés de l’app sont sensibles et limités à Preview/develop ; seul PDF_WORKER_SECRET est partagé avec le worker Preview. DIRECT_URL reste local. Les variables des fournisseurs et les origines HTTPS restent à renseigner avant validation.
+Au 25 octobre 2026, compte duramite32-3695, équipe duramite32-3695s-projects (Hobby), deux projets créés en lhr1 : briefpilot-ai et briefpilot-pdf-worker-staging. App liée au dépôt GitHub ; premier Preview technique Ready et automatisation Git désactivée. Les quatre secrets initiaux et les deux variables Google autorisées sont sensibles et limités à Preview/develop ; seul PDF_WORKER_SECRET est partagé avec le worker Preview. DIRECT_URL reste local. AUTH_URL utilise l’alias stable ; OpenAI/Lemon et les parcours authentifiés restent à configurer/valider.
 
 La cible worker Vercel utilise le paquet isolé décrit dans [pdf-worker.md](pdf-worker.md), sans Dockerfile à la racine Next.js. La protection Preview est conservée ; préparer un accès serveur restreint avant l’appel app → worker. Ne pas désactiver globalement la protection pour faire passer un probe. Hobby accepte techniquement Docker en bêta ; son usage personnel/non commercial et les coûts éventuels du registre doivent être vérifiés avant lancement. Aucune offre payante n’est activée automatiquement.
+
+## Premier Preview technique autorisé
+
+Origine stable : https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app
+
+URI à enregistrer dans Google Cloud (client OAuth Web) :
+
+```text
+https://briefpilot-ai-git-develop-duramite32-3695s-projects.vercel.app/api/auth/callback/google
+```
+
+AUTH_URL utilise cette origine en Preview/develop. Accéder à l’alias depuis le navigateur connecté au compte Vercel autorisé avant de tester Google. Les probes publics renvoient 302 vers Vercel ; ils vérifient la protection, pas le health applicatif ni le succès OAuth. Aucun bypass créé pour ces probes. Si l’application Google est en mode test, utiliser un compte autorisé dans son audience de test.
+
+Le déploiement CLI n’a pas créé d’alias de branche automatiquement avec le remote SSH personnalisé ; l’alias stable a été associé explicitement. Après chaque futur Preview autorisé, vérifier Ready puis réassigner cet alias au nouveau déploiement. Ne jamais l’associer à main/production dans cette procédure. Les SHA et résultats exacts figurent dans [le rapport](staging-validation.md).
