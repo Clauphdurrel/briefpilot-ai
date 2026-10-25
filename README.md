@@ -46,3 +46,5 @@ Construire l'application avant les intégrations/E2E. Ces deux campagnes créent
 Voir [le runbook](docs/operations/runbook.md) pour le runtime PDF, les migrations, la sauvegarde/restauration et les vérifications de déploiement. La CI distante, le choix d'hébergement et la configuration de production appartiennent aux étapes suivantes.
 
 L’observabilité est décrite dans [le guide opérateur](docs/operations/observability.md), avec [suivi des coûts IA](docs/operations/ai-cost-monitoring.md) et [réponse aux incidents](docs/operations/incident-response.md). Les intégrations distantes sont désactivées par défaut et les alertes doivent être configurées et vérifiées dans les comptes correspondants.
+
+Le [guide CI GitHub](docs/operations/ci-cd.md) décrit les cinq contrôles, les bases jetables et les protections à activer après validation des runs distants.

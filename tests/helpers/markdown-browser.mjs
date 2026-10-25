@@ -1,3 +1,4 @@
+import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, readdirSync, readFileSync } from "node:fs";
@@ -7,7 +8,7 @@ export async function checkMarkdownBrowser({ base, token, projectId, briefId, ba
   const profile = mkdtempSync("/tmp/briefpilot-markdown-chrome-");
   const downloads = mkdtempSync("/tmp/briefpilot-markdown-downloads-");
   const debugPort = Number(process.env.MARKDOWN_BROWSER_PORT ?? 9351);
-  const browser = spawn("/usr/bin/google-chrome", ["--headless=new", "--no-sandbox", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, "about:blank"], { stdio: "ignore" });
+  const browser = spawn(chromium.executablePath(), ["--headless=new", "--no-sandbox", "--disable-gpu", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, "about:blank"], { stdio: "ignore" });
   let socket;
   try {
     let pages;
