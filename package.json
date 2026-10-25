@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -14,7 +14,9 @@
     "db:generate": "prisma generate",
     "db:deploy": "prisma migrate deploy",
     "observability:prune": "node scripts/prune-ai-usage.mjs",
-    "observability:report": "node scripts/ai-usage-report.mjs"
+    "observability:report": "node scripts/ai-usage-report.mjs",
+    "test:pdf-worker": "node --test tests/pdf-worker.integration.test.mjs",
+    "test:pdf-worker:docker": "node scripts/test-pdf-worker-docker.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
