@@ -49,6 +49,6 @@ Node 24, pnpm 11.9. Commandes demandées exécutées : pnpm lint ; pnpm build ; 
 
 Lighthouse, axe et Prettier ont été installés uniquement dans /tmp, sans ajout de dépendance runtime ou de plugin. Les fonctionnalités privées restent protégées par leurs contrôles serveur existants. La collecte PostHog externe n’a pas été activée ; ses transports sont mockés dans les tests.
 
-## Validation opérateur restant à obtenir
+## Validation opérateur
 
-L’implémentation et les preuves locales sont prêtes à revoir. L’apparence et les textes doivent encore être approuvés par l’opérateur avant de considérer l’étape 27 validée. Aucun « OK étape 27 » anticipé, aucune étape 28/29 et aucune publication commerciale. Le domaine, le contact et les pages légales sont volontairement préparés sans information inventée.
+L’opérateur a explicitement validé l’apparence et les textes le 25 octobre 2026, ainsi que la fusion de la PR #8 après réussite de tous ses contrôles. Les résultats distants sont consultables dans les [contrôles de la PR #8](https://github.com/Clauphdurrel/briefpilot-ai/pull/8/checks). La fusion reste conditionnée à leur réussite ; aucun déploiement ni étape 28/29 n’est autorisé par cette validation. Le domaine, le contact et les pages légales sont volontairement préparés sans information inventée.
