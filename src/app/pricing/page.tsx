@@ -1,10 +1,57 @@
-import { CheckoutButton } from "@/components/billing/checkout-button";
-import { billingConfigured } from "@/server/billing/config";
-export const dynamic = "force-dynamic";
 import Link from "next/link";
-import { planNames, plans } from "@/config/plans";
-import { Button } from "@/components/ui/button";
+import { MarketingShell } from "@/components/marketing/marketing-shell";
+import { PricingCards } from "@/components/marketing/pricing-preview";
+import { billingConfigured } from "@/server/billing/config";
+import { marketingMetadata } from "@/lib/marketing-seo";
+export const dynamic = "force-dynamic";
+export const metadata = marketingMetadata(
+  "Tarifs et plans — BriefPilot AI",
+  "/pricing",
+  "Comparez les plans Free, Pro, Agency et Enterprise de BriefPilot AI. Découvrez les quotas de projets, briefs, backlogs et exports PDF.",
+);
 export default function PricingPage() {
-  const configured = billingConfigured();
-  return <main className="mx-auto max-w-7xl space-y-10 px-5 py-16"><header className="max-w-3xl space-y-4"><Link href="/" className="text-sm font-semibold">BriefPilot AI</Link><h1 className="text-4xl font-bold tracking-tight">Un plan adapté à vos projets</h1><p className="text-muted-foreground">Tarifs et quotas indicatifs du MVP. Mode test uniquement : aucun achat réel. Les droits sont confirmés par le prestataire après le checkout.</p></header><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">{planNames.map((id) => { const plan = plans[id], limit = (value: number | null) => value === null ? "Personnalisé" : value; return <section key={id} className="flex flex-col rounded-2xl border p-6"><h2 className="text-xl font-semibold">{plan.name}</h2><p className="my-5 text-3xl font-bold">{plan.monthlyPriceEuro === null ? "Sur devis" : `${plan.monthlyPriceEuro} €`}<span className="text-sm font-normal text-muted-foreground">{plan.monthlyPriceEuro === null ? "" : " / mois"}</span></p><ul className="mb-6 flex-1 space-y-3 text-sm"><li>{limit(plan.limits.ACTIVE_PROJECTS)} projets actifs</li><li>{limit(plan.limits.AI_INTERVIEW)} réponses IA d’interview / mois</li><li>{limit(plan.limits.AI_BRIEF)} briefs / mois</li><li>{limit(plan.limits.AI_BACKLOG)} backlogs / mois</li><li>Markdown et prompts Codex inclus</li><li>PDF : {plan.limits.PDF_EXPORT === null ? "inclus" : `${plan.limits.PDF_EXPORT} / mois`}</li><li>Historique : {plan.features.historyVersions === null ? "complet" : `${plan.features.historyVersions} dernières versions`}</li></ul>{id === "FREE" ? <Button asChild><Link href="/login">Commencer gratuitement</Link></Button> : id === "PRO" || id === "AGENCY" ? <CheckoutButton plan={id} configured={configured} /> : <><Button disabled variant="outline">Contacter les ventes</Button><p className="mt-3 text-xs text-muted-foreground">Offre sur devis, non souscriptible en ligne.</p></>}</section>; })}</div><p className="text-sm text-muted-foreground">Personnalisation documentaire et équipes : capacités prévues, non disponibles dans le MVP actuel. Pro prévoit une personnalisation limitée ; Agency prévoit 5 membres et le support prioritaire. Les plafonds techniques de sécurité restent applicables à tous les plans.</p><Link href="/dashboard/settings/subscription" className="underline">Consulter mon abonnement</Link></main>;
+  return (
+    <MarketingShell page="pricing">
+      <div className="mk-container">
+        <header className="mk-page-hero">
+          <p className="mk-eyebrow">UN PLAN ADAPTÉ À VOS PROJETS</p>
+          <h1>
+            Préparez mieux.
+            <br />
+            Choisissez votre rythme.
+          </h1>
+          <p>
+            Commencez avec Free. Les paiements Pro et Agency sont disponibles en
+            mode Test uniquement : aucun achat réel. Les droits sont confirmés
+            par le prestataire après le checkout.
+          </p>
+        </header>
+        <section
+          className="mk-subpage-section"
+          aria-label="Comparaison des offres"
+        >
+          <h2 className="sr-only">Les quatre plans BriefPilot AI</h2>
+          <PricingCards checkout configured={billingConfigured()} />
+          <p className="mk-pricing-disclaimer">
+            Les quotas IA et PDF se renouvellent mensuellement ; la capacité de
+            projets actifs ne se réinitialise pas. Chaque réponse IA consomme
+            une unité, y compris la première question et les appels envoyés au
+            fournisseur qui échouent. Pro et Agency incluent l’historique
+            complet ; Free donne accès aux deux dernières versions par type de
+            document. Les limites techniques de sécurité restent applicables à
+            tous les plans.
+          </p>
+          <p className="mk-pricing-disclaimer">
+            Personnalisation documentaire, équipes et support prioritaire :
+            capacités prévues, non disponibles dans le MVP. Enterprise est une
+            offre à définir, non souscriptible en ligne.{" "}
+            <Link href="/dashboard/settings/subscription">
+              Consulter mon abonnement
+            </Link>
+            .
+          </p>
+        </section>
+      </div>
+    </MarketingShell>
+  );
 }

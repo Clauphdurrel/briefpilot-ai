@@ -86,7 +86,7 @@ test('Chrome shows real quotas, disables paid activation, and guards project rea
   try{
     const context=await browser.newContext();await context.addCookies([{name:'authjs.session-token',value:tokens[2],url:base}]);const page=await context.newPage();
     for(const width of [375,1440]){
-      await page.setViewportSize({width,height:1000});await page.goto(base+'/pricing');await page.getByRole('heading',{name:'Un plan adapté à vos projets'}).waitFor();
+      await page.setViewportSize({width,height:1000});await page.goto(base+'/pricing');await page.getByRole('region',{name:'Comparaison des offres'}).waitFor();
       assert.equal(await page.getByRole('button',{name:'Passer à Pro',exact:true}).isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Choisir Agency',exact:true}).isDisabled(),true);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       await page.goto(base+'/dashboard/settings/subscription');await page.getByRole('heading',{name:'Abonnement Free',exact:true}).waitFor();assert.equal(await page.getByRole('progressbar').count(),5);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     }
